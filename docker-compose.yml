@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: helpix
+      POSTGRES_PASSWORD: helpix
+      POSTGRES_DB: helpix
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpix -d helpix"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tenant-auth:
+    build:
+      context: .
+      dockerfile: docker/node-service.Dockerfile
+    env_file: .env
+    environment:
+      SERVICE: tenant-auth
+      PORT: "4001"
+      DATABASE_URL: postgres://helpix:helpix@postgres:5432/helpix
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/node-service.Dockerfile
+    env_file: .env
+    environment:
+      SERVICE: gateway
+      PORT: "4000"
+      TENANT_AUTH_URL: http://tenant-auth:4001
+    ports:
+      - "4000:4000"
+    depends_on:
+      - tenant-auth
+
+volumes:
+  pgdata: {}

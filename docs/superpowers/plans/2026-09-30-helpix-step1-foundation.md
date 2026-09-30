@@ -3014,7 +3014,7 @@ A small in-house component set styled with Tailwind v4 and CSS-variable theme to
   - `Badge` — prop `variant?: 'default' | 'secondary' | 'outline' | 'destructive'`
   - `Dialog` — `v-model:open` (boolean); `DialogContent` renders a native modal `<dialog>` while open and sets `open` to false on Escape or backdrop click
   - Slot-only styled elements: `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`
-  - `HelpixLogo` — the brand lockup (mark + lowercase `helpix` wordmark), or the square mark with `markOnly`; size it with a text-size class (lockup) or `size-*` (mark)
+  - `HelpixLogo` — the outlined brand lockup from `brand/logo/lockup/helpix-lockup-primary.svg` (mark in `text-brand`, wordmark in `fill-foreground`), or the square mark with `markOnly`; size the lockup with a height class (`h-6`) and the mark with `size-*`
   - Brand tokens as Tailwind colours: `brand` (Mint 600), `brand-bright`; fonts `font-sans`, `font-display`, `font-mono`
   - All components accept a `class` prop merged with `cn`
 
@@ -3136,18 +3136,22 @@ describe('Badge and slot primitives', () => {
 })
 
 describe('HelpixLogo', () => {
-  it('renders the lockup with a lowercase wordmark and an accessible name', () => {
+  it('renders the outlined lockup (no live text) with an accessible name and themed colours', () => {
     const w = mount(HelpixLogo)
+    expect(w.element.tagName.toLowerCase()).toBe('svg')
     expect(w.attributes('aria-label')).toBe('helpix')
-    expect(w.text()).toBe('helpix')
-    expect(w.find('svg rect').exists()).toBe(true)
+    expect(w.attributes('viewBox')).toBe('0.00 -74.00 306.99 88.60')
+    expect(w.text()).toBe('')
+    expect(w.find('g.text-brand rect').exists()).toBe(true)
+    expect(w.find('path.fill-foreground').exists()).toBe(true)
+    expect(w.html()).not.toContain('#0C9A82')
   })
 
   it('renders only the square mark with markOnly', () => {
     const w = mount(HelpixLogo, { props: { markOnly: true } })
-    expect(w.element.tagName.toLowerCase()).toBe('svg')
     expect(w.attributes('viewBox')).toBe('0 0 100 100')
-    expect(w.text()).toBe('')
+    expect(w.find('path').attributes('d')).toBe('M31 21 V79 M31 58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79')
+    expect(w.find('path.fill-foreground').exists()).toBe(false)
   })
 })
 
@@ -3323,51 +3327,32 @@ export function cn(...inputs: ClassValue[]) {
 
 The fonts themselves are loaded by each app (the dashboard's `index.html` in Task 8), not by this package.
 
-`packages/ui/src/components/HelpixLogo.vue` (paths copied verbatim from `brand/logo/refined/h-pixel-mint.svg`; the lockup crops the mark's viewBox to its ink so it can sit on the wordmark's baseline at 74% of the font size, per the brand sheet):
+`packages/ui/src/components/HelpixLogo.vue`. The brand sheet requires the outlined lockup files, not typed text, wherever the logo appears. Transcribe the SVG geometry **verbatim** from the brand files; only the colours change, from fixed hex to theme tokens, so the logo follows light and dark mode:
+- Lockup: copy `brand/logo/lockup/helpix-lockup-primary.svg` exactly: the `viewBox`, the mark group (its `transform`s, stroke paths and pixel `rect`) and the wordmark `<path>` (its `transform` and full `d`). Replace the outer `<g color="#0C9A82">` with `<g class="text-brand">` (the mark uses `currentColor`), and the wordmark's `fill="#101A18"` with `class="fill-foreground"`.
+- Mark only: copy `brand/logo/refined/h-pixel-mint.svg` exactly (viewBox `0 0 100 100`; the single stroke path `M31 21 V79 M31 58 C31 46.5 …`; the pixel rect), with its colour from `currentColor` and the `text-brand` class.
+- Do not alter any path data, transform or spacing (no rotation, stretching, moved pixel, shadow, outline or gradient).
+
 ```vue
 <script setup lang="ts">
 import type { ClassValue } from 'clsx'
 import { cn } from '../lib/utils'
 
-// markOnly: square mark, e.g. where the name already appears nearby.
+// Lockup by default (size it with a height class, e.g. h-6); markOnly for the square mark (size-*).
 const props = defineProps<{ markOnly?: boolean; class?: ClassValue }>()
 </script>
 
 <template>
-  <svg
-    v-if="props.markOnly"
-    viewBox="0 0 100 100"
-    role="img"
-    aria-label="helpix"
-    :class="cn('size-8 text-brand', props.class)"
-  >
-    <g transform="translate(1.5 0)">
-      <g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
-        <path d="M31 21 V79" />
-        <path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79" />
-      </g>
-      <rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor" />
-    </g>
+  <svg v-if="props.markOnly" viewBox="0 0 100 100" role="img" aria-label="helpix" :class="cn('size-8 text-brand', props.class)">
+    <!-- geometry from brand/logo/refined/h-pixel-mint.svg, verbatim -->
   </svg>
-  <span
-    v-else
-    role="img"
-    aria-label="helpix"
-    :class="cn('inline-flex items-baseline gap-[0.1em] text-2xl text-brand', props.class)"
-  >
-    <svg viewBox="26.5 14 47.25 71" aria-hidden="true" class="h-[0.74em] w-auto flex-none">
-      <g transform="translate(1.5 0)">
-        <g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
-          <path d="M31 21 V79" />
-          <path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79" />
-        </g>
-        <rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor" />
-      </g>
-    </svg>
-    <span aria-hidden="true" class="font-display font-bold leading-none tracking-[-0.04em] text-foreground">helpix</span>
-  </span>
+  <svg v-else viewBox="<from helpix-lockup-primary.svg>" role="img" aria-label="helpix" :class="cn('h-6 w-auto', props.class)">
+    <!-- mark group from helpix-lockup-primary.svg, verbatim, wrapped in <g class="text-brand"> -->
+    <!-- wordmark <path> from helpix-lockup-primary.svg, verbatim, with class="fill-foreground" instead of fill="#101A18" -->
+  </svg>
 </template>
 ```
+
+The comments mark where the transcribed geometry goes; the finished file contains the real SVG elements and no placeholder comments.
 
 `packages/ui/src/components/primitives.ts`:
 ```ts
@@ -3657,7 +3642,7 @@ The dashboard must build with components and styles imported from `@helpix/ui`; 
 
 **Files:**
 - Create: `apps/admin-dashboard/{package.json,index.html,vite.config.ts,tsconfig.json}`
-- Create (copied from `brand/logo/png/`): `apps/admin-dashboard/public/{favicon-32.png,favicon-16.png,apple-touch-icon.png}`
+- Create (copied from `brand/logo/`): `apps/admin-dashboard/public/{favicon.ico,favicon-32.png,favicon-16.png,apple-touch-icon.png}`
 - Create: `apps/admin-dashboard/src/{main.ts,App.vue,styles.css,env.d.ts,router.ts}`
 - Create: `apps/admin-dashboard/src/api/client.ts`, `src/auth/session.ts`, `src/auth/guard.ts`
 - Create: `apps/admin-dashboard/src/layouts/AppLayout.vue`, `src/pages/LoginPage.vue`, `src/pages/TenantsPage.vue`, `src/pages/TenantHomePage.vue`
@@ -3704,6 +3689,7 @@ npm install -D vite @vitejs/plugin-vue @tailwindcss/vite tailwindcss vue-tsc @vu
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>helpix admin</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -3751,6 +3737,7 @@ export default defineConfig({
 Copy the brand icons (use the supplied files as they are):
 ```bash
 mkdir -p apps/admin-dashboard/public
+cp brand/logo/favicon.ico apps/admin-dashboard/public/favicon.ico
 cp brand/logo/png/h-pixel-app-icon-32.png apps/admin-dashboard/public/favicon-32.png
 cp brand/logo/png/h-pixel-app-icon-16.png apps/admin-dashboard/public/favicon-16.png
 cp brand/logo/png/h-pixel-app-icon-180.png apps/admin-dashboard/public/apple-touch-icon.png
@@ -4174,7 +4161,7 @@ async function logout() {
   <div class="min-h-screen bg-muted/40">
     <header class="border-b bg-background">
       <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <RouterLink to="/" aria-label="helpix home"><HelpixLogo class="text-xl" /></RouterLink>
+        <RouterLink to="/" aria-label="helpix home"><HelpixLogo class="h-6" /></RouterLink>
         <div class="flex items-center gap-3 text-sm">
           <span class="text-muted-foreground">{{ session.state.me?.admin.email }}</span>
           <Button variant="outline" size="sm" @click="logout">Log out</Button>
@@ -4222,7 +4209,7 @@ async function submit() {
   <div class="flex min-h-screen items-center justify-center bg-muted/40 px-4">
     <Card class="w-full max-w-sm">
       <CardHeader>
-        <HelpixLogo class="mb-2 text-3xl" />
+        <HelpixLogo class="mb-2 h-8 self-start" />
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Manage your shop's support agent.</CardDescription>
       </CardHeader>
@@ -4338,7 +4325,7 @@ If the build fails to resolve `@helpix/ui/styles.css` itself, replace the import
 - [ ] **Step 6: Manual check**
 
 With `docker compose up -d` running, run `npm run dev -w apps/admin-dashboard`, open http://localhost:5173, and log in as `admin@helpix.local` / `change-me-please`.
-Expected: the login card shows the helpix lockup (mint mark, lowercase wordmark in Bricolage Grotesque) and the tab shows the app-icon favicon; login redirects to `/tenants` showing the empty table with the lockup in the header; a wrong password shows "Invalid email or password"; **Log out** returns to `/login`; visiting `/tenants` while logged out redirects to `/login`.
+Expected: the login card shows the helpix lockup (mint mark and the outlined lowercase wordmark, matching `brand/logo/lockup/helpix-lockup-primary.svg`) and the tab shows the app-icon favicon; login redirects to `/tenants` showing the empty table with the lockup in the header; a wrong password shows "Invalid email or password"; **Log out** returns to `/login`; visiting `/tenants` while logged out redirects to `/login`.
 
 - [ ] **Step 7: Commit**
 
