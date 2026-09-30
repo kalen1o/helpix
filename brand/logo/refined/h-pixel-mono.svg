@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" color="#101A18">
+<g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g>
+</svg>

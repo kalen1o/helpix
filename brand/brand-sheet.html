@@ -1,0 +1,337 @@
+<title>Helpix Brand Sheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a one-page brand sheet. Big lockup hero, then left-aligned sections, each a short rule-set plus a specimen. Mint is the only accent. */
+:root {
+  --bg: #F4F7F6;
+  --panel: #FFFFFF;
+  --ink: #101A18;
+  --muted: #56645F;
+  --line: #DCE3E0;
+  --mint: #0C9A82;
+  --mint-text: #08705F;
+  --mint-bright: #3FD1B5;
+  --mint-wash: #E3F4EF;
+  --night: #0F1716;
+  --warn: #C2413A;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B100F; --panel: #131A19; --ink: #E9F0EE; --muted: #97A6A1; --line: #25302D;
+    --mint: #2FC3A7; --mint-text: #5FDCC3; --mint-wash: #11302A; --warn: #F0776F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B100F; --panel: #131A19; --ink: #E9F0EE; --muted: #97A6A1; --line: #25302D;
+  --mint: #2FC3A7; --mint-text: #5FDCC3; --mint-wash: #11302A; --warn: #F0776F; color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 80px; display: flex; flex-direction: column; gap: 72px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; }
+.hero .lockup { display: flex; align-items: baseline; gap: 0.1em; color: var(--mint); font-size: clamp(64px, 13vw, 132px); }
+.hero .lockup svg.lm { height: 0.74em; width: auto; flex: none; }
+.hero .lockup b { font: 700 clamp(64px, 13vw, 132px)/0.9 var(--display); letter-spacing: -0.045em; color: var(--ink); }
+.hero p { max-width: 46ch; margin: 18px 0 0; color: var(--muted); font-size: 17px; }
+.meta { font: 400 12px/1.9 var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* sections */
+section { display: grid; grid-template-columns: 240px 1fr; gap: 32px; border-top: 1px solid var(--line); padding-top: 24px; }
+section > header h2 { font: 700 24px/1.15 var(--display); letter-spacing: -0.015em; margin: 0 0 8px; text-wrap: balance; }
+section > header p { margin: 0; color: var(--muted); font-size: 14px; max-width: 34ch; }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.label { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* logo versions */
+.versions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tile { border-radius: 12px; border: 1px solid var(--line); aspect-ratio: 4 / 3; max-width: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 14px; min-width: 0; }
+.tile .art { flex: 1; display: grid; place-items: center; }
+.tile .label { opacity: .9; }
+.t-light { background: #FFFFFF; color: #0C9A82; border-color: #DCE3E0; }
+.t-light .label { color: #56645F; }
+.t-light .wm { color: #101A18; }
+.t-dark { background: #0F1716; color: #3FD1B5; border-color: #0F1716; }
+.t-dark .label { color: #8FA39E; }
+.t-dark .wm { color: #E9F0EE; }
+.t-mint { background: #0C9A82; color: #FFFFFF; border-color: #0C9A82; }
+.t-mint .label { color: #D9F3EC; }
+.t-mint .wm { color: #FFFFFF; }
+.t-mono { background: #FFFFFF; color: #101A18; border-color: #DCE3E0; }
+.t-mono .label { color: #56645F; }
+.t-mono .wm { color: #101A18; }
+.lk { display: flex; align-items: baseline; gap: 0.1em; font-size: 38px; }
+svg.lm { height: 0.74em; width: auto; flex: none; }
+.wm { font: 700 38px/1 var(--display); letter-spacing: -0.04em; }
+.solo svg { width: 64px; height: 64px; }
+.appicon svg { width: 72px; height: 72px; filter: drop-shadow(0 6px 12px rgba(12, 154, 130, .25)); }
+
+/* clear space */
+.cs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.cs figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.cs svg.diagram { width: 100%; max-width: 320px; height: auto; align-self: center; color: var(--mint); }
+.rules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.rules li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 14px; }
+.rules b { font: 500 13px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.minrow { display: flex; align-items: end; gap: 22px; flex-wrap: wrap; color: var(--mint); }
+.minrow span { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.minrow em { font: 400 10px var(--mono); color: var(--muted); font-style: normal; }
+.minrow .lkmin { display: flex; align-items: baseline; gap: 0.1em; font-size: 13px; }
+.minrow .lkmin b { font: 700 13px/1 var(--display); letter-spacing: -0.03em; color: var(--ink); }
+
+/* colour */
+.swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.sw { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
+.chip { height: 92px; display: flex; align-items: end; padding: 10px 12px; font: 500 12px var(--mono); }
+.sw .info { padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.sw .name { font-weight: 600; }
+.sw .use { color: var(--muted); font-size: 13px; }
+.sw .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sw code { font: 400 13px var(--mono); }
+.copy { font: 500 12px var(--body); color: var(--mint-text); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.copy:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.cr { font: 400 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.note { font-size: 14px; color: var(--muted); max-width: 70ch; margin: 0; }
+.note b { color: var(--ink); font-weight: 600; }
+
+/* type */
+.type { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.spec { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.spec .big { font: 700 44px/1.05 var(--display); letter-spacing: -0.03em; }
+.spec .big.sans { font: 500 30px/1.2 var(--body); letter-spacing: -0.01em; }
+.spec p { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* widget */
+.widget { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.shop { position: relative; background: var(--mint-wash); border-radius: 12px; min-height: 420px; overflow: hidden; }
+.panel { position: absolute; right: 16px; bottom: 84px; width: min(290px, calc(100% - 32px)); background: var(--panel); border-radius: 14px; box-shadow: 0 18px 40px rgba(8, 40, 34, .18); display: flex; flex-direction: column; overflow: hidden; }
+.panel .top { background: #0C9A82; color: #FFFFFF; padding: 12px 14px; font-weight: 600; font-size: 14px; }
+.panel .top small { display: block; font-weight: 400; opacity: .85; font-size: 12px; }
+.msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.m { padding: 7px 10px; border-radius: 12px; max-width: 85%; }
+.m.me { align-self: flex-end; background: var(--ink); color: var(--panel); border-bottom-right-radius: 3px; }
+.m.bot { background: var(--mint-wash); color: var(--ink); border-bottom-left-radius: 3px; }
+.powered { border-top: 1px solid var(--line); padding: 8px; display: flex; justify-content: center; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.powered svg.lm { color: var(--mint); }
+.powered b { font: 700 11.5px/1 var(--display); letter-spacing: -0.02em; color: var(--ink); }
+.fab { position: absolute; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; background: #0C9A82; color: #FFFFFF; display: grid; place-items: center; box-shadow: 0 8px 20px rgba(12, 154, 130, .38); }
+.fab svg { width: 28px; height: 28px; }
+
+/* don'ts */
+.donts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.dont { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dont .box { aspect-ratio: 1; max-width: 100%; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; position: relative; color: var(--mint); overflow: hidden; }
+.dont .box svg.m { width: 54%; height: auto; overflow: visible; }
+.dont .box svg.x { position: absolute; top: 8px; right: 8px; width: 16px; height: 16px; color: var(--warn); }
+.dont p { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* files */
+.files { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; font: 400 13px/1.9 var(--mono); }
+.files li { overflow-wrap: anywhere; }
+.files span { color: var(--muted); }
+
+@media (max-width: 860px) {
+  section { grid-template-columns: 1fr; gap: 16px; }
+  .hero { grid-template-columns: 1fr; }
+  .meta { text-align: left; }
+  .donts { grid-template-columns: repeat(3, 1fr); }
+  .widget, .cs, .type { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .versions, .swatches { grid-template-columns: 1fr 1fr; }
+  .donts { grid-template-columns: 1fr 1fr; }
+  .files { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <div class="lockup"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><b>helpix</b></div>
+      <p>The AI support agent that lives in a shop's chat widget. The mark is a lowercase h for help. The pixel above it is the pix in the name.</p>
+    </div>
+    <div class="meta">Brand sheet v1<br>30 Sep 2026<br>Mark: h + Pixel</div>
+  </div>
+
+  <section id="versions">
+    <header><h2>Logo versions</h2><p>Use the horizontal lockup by default. Use the mark alone where the name already appears nearby or space is square.</p></header>
+    <div class="body">
+      <div class="versions">
+        <div class="tile t-light"><div class="art"><div class="lk"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><span class="wm">helpix</span></div></div><span class="label">Primary · on light</span></div>
+        <div class="tile t-dark"><div class="art"><div class="lk"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><span class="wm">helpix</span></div></div><span class="label">On dark</span></div>
+        <div class="tile t-mint"><div class="art"><div class="lk"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><span class="wm">helpix</span></div></div><span class="label">Reversed · on mint</span></div>
+        <div class="tile t-light"><div class="art solo"><svg viewBox="0 0 100 100" aria-hidden="true" ><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg></div><span class="label">Mark only</span></div>
+        <div class="tile t-light"><div class="art appicon"><svg viewBox="0 0 100 100" aria-hidden="true" ><rect width="100" height="100" rx="23" fill="#0C9A82"/><g color="#FFFFFF" transform="translate(15 15) scale(0.7)"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></g></svg></div><span class="label">App icon · favicon</span></div>
+        <div class="tile t-mono"><div class="art"><div class="lk"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><span class="wm">helpix</span></div></div><span class="label">One colour · ink</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="clear-space">
+    <header><h2>Clear space and minimum size</h2><p>The pixel is the unit of measure. Call its width x.</p></header>
+    <div class="body">
+      <div class="cs">
+        <figure>
+          <svg class="diagram" viewBox="8.0 -4.5 84.25 108.0" aria-label="Clear space diagram"><rect x="14.0" y="1.5" width="72.25" height="96.0" fill="none" stroke="currentColor" stroke-width="0.6" stroke-dasharray="2 2" opacity="0.8"/><rect x="26.5" y="14" width="47.25" height="71" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.5"/><rect x="14.0" y="43.25" width="12.5" height="12.5" rx="3.4" fill="currentColor" opacity="0.22"/><rect x="73.75" y="43.25" width="12.5" height="12.5" rx="3.4" fill="currentColor" opacity="0.22"/><rect x="43.875" y="1.5" width="12.5" height="12.5" rx="3.4" fill="currentColor" opacity="0.22"/><rect x="43.875" y="85" width="12.5" height="12.5" rx="3.4" fill="currentColor" opacity="0.22"/><text x="20.25" y="61.75" font-size="5" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">x</text><text x="80.0" y="61.75" font-size="5" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">x</text><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg>
+          <span class="label">Keep 1x clear on every side of the mark</span>
+        </figure>
+        <figure>
+          <ul class="rules">
+            <li><b>x</b><span>Width of the pixel. 12.5% of the mark's 100-unit grid.</span></li>
+            <li><b>1x</b><span>Clear space around the mark and the lockup.</span></li>
+            <li><b>0.8x</b><span>Gap between the mark and the wordmark. The mark is 74% of the wordmark's font size and sits on its baseline.</span></li>
+            <li><b>16 px</b><span>Smallest mark. Below this, use the app icon.</span></li>
+            <li><b>72 px</b><span>Smallest lockup width, as in "Powered by helpix".</span></li>
+          </ul>
+          <div class="minrow">
+            <span><svg viewBox="0 0 100 100" aria-hidden="true" style="width:32px;height:32px"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><em>32 px</em></span>
+            <span><svg viewBox="0 0 100 100" aria-hidden="true" style="width:16px;height:16px"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><em>16 px</em></span>
+            <span><span class="lkmin"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><b>helpix</b></span><em>72 px lockup</em></span>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="colour">
+    <header><h2>Colour</h2><p>Mint is the only brand colour. Everything else is a tinted neutral.</p></header>
+    <div class="body">
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#0C9A82;color:#FFFFFF">Mint 600</div><div class="info"><span class="name">Mint</span><span class="use">Logo, launcher, primary buttons</span><div class="row"><code>#0C9A82</code><button class="copy" id="c1" data-hex="#0C9A82">Copy</button></div><span class="cr">3.5:1 on white · logo and large text only</span></div></div>
+        <div class="sw"><div class="chip" style="background:#08705F;color:#FFFFFF">Mint 700</div><div class="info"><span class="name">Mint deep</span><span class="use">Links and small mint text</span><div class="row"><code>#08705F</code><button class="copy" id="c2" data-hex="#08705F">Copy</button></div><span class="cr">6.0:1 on white · AA body text</span></div></div>
+        <div class="sw"><div class="chip" style="background:#3FD1B5;color:#0F1716">Mint 400</div><div class="info"><span class="name">Mint bright</span><span class="use">Logo and accents on dark</span><div class="row"><code>#3FD1B5</code><button class="copy" id="c3" data-hex="#3FD1B5">Copy</button></div><span class="cr">9.5:1 on Night</span></div></div>
+        <div class="sw"><div class="chip" style="background:#E3F4EF;color:#101A18">Mint 50</div><div class="info"><span class="name">Mint wash</span><span class="use">Agent message bubbles, soft panels</span><div class="row"><code>#E3F4EF</code><button class="copy" id="c4" data-hex="#E3F4EF">Copy</button></div><span class="cr">Ink on wash 15.6:1</span></div></div>
+        <div class="sw"><div class="chip" style="background:#101A18;color:#E9F0EE">Ink</div><div class="info"><span class="name">Ink</span><span class="use">Wordmark, body text</span><div class="row"><code>#101A18</code><button class="copy" id="c5" data-hex="#101A18">Copy</button></div><span class="cr">17.8:1 on white</span></div></div>
+        <div class="sw"><div class="chip" style="background:#0F1716;color:#3FD1B5">Night</div><div class="info"><span class="name">Night</span><span class="use">Dark backgrounds</span><div class="row"><code>#0F1716</code><button class="copy" id="c6" data-hex="#0F1716">Copy</button></div><span class="cr">Pairs with Mint 400</span></div></div>
+      </div>
+      <p class="note"><b>Mint 600 fails AA for small text on white (3.5:1).</b> Use it for the logo, icons, the launcher and text 24 px or larger. Use Mint 700 for links and button labels on white.</p>
+    </div>
+  </section>
+
+  <section id="type">
+    <header><h2>Type</h2><p>Two families from Google Fonts, both free for commercial use.</p></header>
+    <div class="body">
+      <div class="type">
+        <div class="spec"><span class="label">Display · wordmark</span><div class="big">helpix</div><p>Bricolage Grotesque Bold, tracking −4%. Always lowercase. Also for large headings.</p></div>
+        <div class="spec"><span class="label">Interface · body</span><div class="big sans">Your order ships tomorrow.</div><p>Instrument Sans 400/500/600. Widget messages, dashboard, docs.</p></div>
+      </div>
+      <p class="note">The wordmark on this page is live text. Before it goes into print or the app store, outline it to vector paths so it cannot fall back to another font.</p>
+    </div>
+  </section>
+
+  <section id="widget">
+    <header><h2>In the widget</h2><p>This is where most people will see the logo: on someone else's shop.</p></header>
+    <div class="body">
+      <div class="widget">
+        <div class="shop">
+          <div class="panel">
+            <div class="top">Teen Fashion support<small>Usually replies instantly</small></div>
+            <div class="msgs">
+              <div class="m me">Where's my order #4102?</div>
+              <div class="m bot">It left the warehouse this morning. Delivery is expected Thursday 2 Oct.</div>
+            </div>
+            <div class="powered">Powered by <span class="lkmin" style="display:inline-flex;align-items:baseline;gap:0.1em;font-size:11.5px"><svg class="lm" viewBox="26.5 14 47.25 71" aria-hidden="true"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><b>helpix</b></span></div>
+          </div>
+          <div class="fab"><svg viewBox="0 0 100 100" aria-hidden="true" ><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg></div>
+        </div>
+        <ul class="rules">
+          <li><b>56 px</b><span>Launcher diameter, 16 px from the bottom and right edges of the page.</span></li>
+          <li><b>28 px</b><span>Mark inside the launcher, white on Mint 600.</span></li>
+          <li><b>Header</b><span>Shows the shop's name, not helpix. The agent speaks for the shop.</span></li>
+          <li><b>Footer</b><span>"Powered by" plus the lockup at 12 px. This is the smallest the lockup appears.</span></li>
+          <li><b>Tenants</b><span>A shop may recolour the launcher. The mark stays white on it, never mint on mint.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="donts">
+    <header><h2>Don't</h2><p>Use the supplied files as they are.</p></header>
+    <div class="body">
+      <div class="donts">
+        <div class="dont"><div class="box"><svg class="m" viewBox="0 0 100 100" aria-hidden="true" ><g transform="rotate(-18 50 50)"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></g></svg><svg class="x" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><p>Rotate or tilt the mark.</p></div>
+        <div class="dont"><div class="box"><svg class="m" viewBox="0 0 100 100" aria-hidden="true" ><g transform="translate(-22 0) scale(1.45 1)"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></g></svg><svg class="x" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><p>Stretch or squash it.</p></div>
+        <div class="dont"><div class="box"><svg class="m" viewBox="0 0 100 100" aria-hidden="true" ><g color="#E0457B"><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></g></svg><svg class="x" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><p>Recolour it outside the palette.</p></div>
+        <div class="dont"><div class="box"><svg class="m" viewBox="0 0 100 100" aria-hidden="true" ><g transform="translate(1.5 0)"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="46" y="16" width="12.5" height="12.5" rx="3.4" fill="currentColor"/></g></svg><svg class="x" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><p>Move or drop the pixel.</p></div>
+        <div class="dont"><div class="box"><svg class="m" viewBox="0 0 100 100" aria-hidden="true" ><defs><linearGradient id="dg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#3FD1B5"/><stop offset="1" stop-color="#6B4BE0"/></linearGradient><filter id="ds"><feDropShadow dx="3" dy="4" stdDeviation="2" flood-opacity=".45"/></filter></defs><g filter="url(#ds)" color="#6B4BE0" style="color:#6B4BE0"><g transform="translate(1.5 0)"><g fill="none" stroke="url(#dg)" stroke-width="12" stroke-linecap="round">
+<path d="M31 21 V79"/><path d="M31 70 V58 C31 46.5 39 39.5 48.5 39.5 C58 39.5 66 46.5 66 58 V79"/></g>
+<rect x="59.75" y="14" width="12.5" height="12.5" rx="3.4" fill="url(#dg)"/></g></g></svg><svg class="x" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><p>Add shadows, outlines or gradients.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="files">
+    <header><h2>Files</h2><p>In the repo under brand/logo/.</p></header>
+    <div class="body">
+      <ul class="files">
+        <li>refined/h-pixel-mint.svg <span>· primary</span></li>
+        <li>refined/h-pixel-mono.svg <span>· one colour</span></li>
+        <li>refined/h-pixel-app-icon.svg <span>· icon</span></li>
+        <li>png/h-pixel-mint-1024.png <span>· transparent</span></li>
+        <li>png/h-pixel-mono-1024.png <span>· transparent</span></li>
+        <li>png/h-pixel-app-icon-1024.png <span>· store</span></li>
+        <li>png/h-pixel-app-icon-512.png <span>· PWA</span></li>
+        <li>png/h-pixel-app-icon-180.png <span>· Apple touch</span></li>
+        <li>png/h-pixel-app-icon-32.png, -16.png <span>· favicon</span></li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const hex = btn.dataset.hex;
+      const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 1400); };
+      try {
+        navigator.clipboard.writeText(hex).then(done, () => selectHex(btn));
+      } catch (e) { selectHex(btn); }
+    });
+  });
+  function selectHex(btn) {
+    const code = btn.parentElement.querySelector('code');
+    const r = document.createRange(); r.selectNodeContents(code);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    btn.textContent = 'Press ⌘C';
+  }
+</script>
