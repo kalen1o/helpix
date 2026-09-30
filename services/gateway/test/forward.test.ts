@@ -1,3 +1,4 @@
+import net, { type AddressInfo } from 'node:net'
 import type { FastifyInstance } from 'fastify'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildGateway } from '../src/app'
@@ -88,5 +89,43 @@ describe('gateway forwarding', () => {
     expect(res.statusCode).toBe(502)
     expect(res.json().error.code).toBe('upstream_unavailable')
     await down.close()
+  })
+})
+
+describe('gateway body streaming', () => {
+  it('streams a multi-chunk body under the limit through intact', async () => {
+    const big = JSON.stringify({ data: 'y'.repeat(300_000) })
+    const g = await buildGateway({ config: { ...testConfig(echo.url), bodyLimitBytes: 1_000_000 } })
+    const res = await g.inject({ method: 'POST', url: '/auth/login', headers: { 'content-type': 'application/json' }, payload: big })
+    expect(res.statusCode).toBe(200)
+    expect(echo.calls[0]!.body).toBe(big)
+    await g.close()
+  })
+
+  it('closes the upstream connection when the client aborts mid-upload', async () => {
+    let upstreamClosed!: () => void
+    const closed = new Promise<void>((r) => (upstreamClosed = r))
+    const sink = net.createServer((sock) => {
+      sock.on('error', () => {})
+      sock.resume()
+      sock.on('close', upstreamClosed)
+    })
+    await new Promise<void>((r) => sink.listen(0, '127.0.0.1', r))
+    const sinkPort = (sink.address() as AddressInfo).port
+    const g = await buildGateway({ config: testConfig(`http://127.0.0.1:${sinkPort}`) })
+    await g.listen({ port: 0, host: '127.0.0.1' })
+    const gwPort = (g.server.address() as AddressInfo).port
+    const client = net.connect(gwPort, '127.0.0.1')
+    client.on('error', () => {})
+    await new Promise<void>((r) => client.once('connect', () => r()))
+    client.write('POST /auth/login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 500\r\n\r\n{"partial":')
+    await new Promise((r) => setTimeout(r, 100))
+    client.destroy()
+    await Promise.race([
+      closed,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('upstream connection was not closed')), 3000)),
+    ])
+    await g.close()
+    await new Promise((r) => sink.close(r))
   })
 })

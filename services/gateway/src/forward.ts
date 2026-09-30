@@ -44,7 +44,13 @@ export async function forward(req: FastifyRequest, reply: FastifyReply, opts: Fo
   if (hasBody) {
     body = new PassThrough()
     body.on('error', () => {})
-    ;(req.body as Readable).pipe(body)
+    const src = req.body as Readable
+    src.pipe(body)
+    // pipe() does not propagate source failure; forward it one way only (never destroy the source).
+    src.once('error', (e) => body!.destroy(e))
+    src.once('close', () => {
+      if (!src.readableEnded) body!.destroy(new Error('client aborted request body'))
+    })
   }
   let upstream: Dispatcher.ResponseData
   try {
