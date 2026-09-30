@@ -5,6 +5,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Help
 import { ApiError } from '@/api/client'
 import { homeFor } from '@/auth/guard'
 import { session } from '@/auth/session'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const email = ref('')
@@ -27,11 +28,21 @@ async function submit() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-muted/40 px-4">
-    <Card class="w-full max-w-sm">
+  <div class="relative flex min-h-screen flex-col items-center justify-center gap-8 overflow-hidden bg-background px-4">
+    <!-- Faint Mint-wash glow: brand presence without decoration competing with the form. -->
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(60rem_30rem_at_50%_-10%,var(--color-secondary),transparent_70%)]"
+    />
+    <div class="absolute right-4 top-4">
+      <ThemeToggle />
+    </div>
+
+    <HelpixLogo class="relative h-9" />
+
+    <Card class="relative w-full max-w-sm shadow-[0_12px_32px_-12px_rgb(16_26_24/0.18)]">
       <CardHeader>
-        <HelpixLogo class="mb-2 h-8 self-start" />
-        <CardTitle>Sign in</CardTitle>
+        <CardTitle class="font-display text-xl tracking-tight">Sign in to helpix</CardTitle>
         <CardDescription>Manage your shop's support agent.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -45,7 +56,7 @@ async function submit() {
             <Input id="password" v-model="password" type="password" autocomplete="current-password" required />
           </div>
           <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
-          <Button type="submit" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</Button>
+          <Button type="submit" class="mt-1 w-full" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</Button>
         </form>
       </CardContent>
     </Card>

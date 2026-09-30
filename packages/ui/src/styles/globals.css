@@ -21,6 +21,7 @@
   --accent: #E3F4EF;
   --accent-foreground: #101A18;
   --destructive: #C2413A;
+  --destructive-foreground: #FFFFFF;
   --border: #DCE3E0;
   --input: #DCE3E0;
   --ring: #0C9A82;
@@ -43,6 +44,7 @@
   --accent: #11302A;
   --accent-foreground: #E9F0EE;
   --destructive: #F0776F;
+  --destructive-foreground: #0F1716;
   --border: #25302D;
   --input: #25302D;
   --ring: #2FC3A7;
@@ -67,6 +69,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -74,6 +77,20 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* Motion tokens: overrides Tailwind's weak default ease-out so `ease-out` utilities get a strong curve. */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 @layer base {
@@ -85,5 +102,73 @@
   }
   h1, h2 {
     @apply font-display tracking-tight;
+  }
+}
+
+/* Switching themes should be instant, not a 150ms colour fade on every element. */
+.hx-theme-switching,
+.hx-theme-switching * {
+  transition: none !important;
+}
+
+/* Modal dialog: enters in 200ms from a slightly smaller, transparent state; exits faster. Stays centred. */
+.hx-dialog {
+  opacity: 0;
+  transform: scale(0.98);
+  transition:
+    opacity 150ms var(--ease-out),
+    transform 150ms var(--ease-out),
+    overlay 150ms allow-discrete,
+    display 150ms allow-discrete;
+}
+
+.hx-dialog[open] {
+  opacity: 1;
+  transform: scale(1);
+  transition-duration: 200ms;
+}
+
+@starting-style {
+  .hx-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.hx-dialog::backdrop {
+  background: rgb(11 16 15 / 0.45);
+  opacity: 0;
+  transition:
+    opacity 150ms var(--ease-out),
+    overlay 150ms allow-discrete,
+    display 150ms allow-discrete;
+}
+
+.hx-dialog[open]::backdrop {
+  opacity: 1;
+  transition-duration: 200ms;
+}
+
+/* On a dark page a light scrim barely registers; dim harder so the dialog stands out. */
+.dark .hx-dialog::backdrop {
+  background: rgb(0 0 0 / 0.65);
+}
+
+@starting-style {
+  .hx-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-dialog,
+  .hx-dialog[open] {
+    transform: none;
+  }
+
+  @starting-style {
+    .hx-dialog[open] {
+      transform: none;
+    }
   }
 }

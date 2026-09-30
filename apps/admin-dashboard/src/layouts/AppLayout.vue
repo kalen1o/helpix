@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { Button, HelpixLogo } from '@helpix/ui'
 import { session } from '@/auth/session'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 
@@ -12,12 +13,15 @@ async function logout() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-muted/40">
-    <header class="border-b bg-background">
-      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <RouterLink to="/" aria-label="helpix home"><HelpixLogo class="h-6" /></RouterLink>
+  <div class="min-h-screen bg-background">
+    <header class="sticky top-0 z-10 border-b bg-card/85 backdrop-blur supports-[backdrop-filter]:bg-card/70">
+      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+        <RouterLink to="/" aria-label="helpix home" class="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <HelpixLogo class="h-6" />
+        </RouterLink>
         <div class="flex items-center gap-3 text-sm">
-          <span class="text-muted-foreground">{{ session.state.me?.admin.email }}</span>
+          <span class="hidden text-muted-foreground sm:inline">{{ session.state.me?.admin.email }}</span>
+          <ThemeToggle />
           <Button variant="outline" size="sm" @click="logout">Log out</Button>
         </div>
       </div>

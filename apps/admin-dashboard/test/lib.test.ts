@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { formatDate } from '../src/lib/format'
 import { parseOriginsInput } from '../src/lib/origins'
 import { slugify } from '../src/lib/slugify'
 
@@ -30,5 +31,11 @@ describe('parseOriginsInput', () => {
 
   it('returns an empty list for blank input', () => {
     expect(parseOriginsInput('  \n ')).toEqual([])
+  })
+})
+
+describe('formatDate', () => {
+  it('uses an unambiguous day-month-year with a month name', () => {
+    expect(formatDate('2026-09-30T12:00:00.000Z')).toBe('30 Sep 2026')
   })
 })

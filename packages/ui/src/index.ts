@@ -7,6 +7,8 @@ export { default as Badge } from './components/Badge.vue'
 export { default as Dialog } from './components/Dialog.vue'
 export { default as DialogContent } from './components/DialogContent.vue'
 export { default as HelpixLogo } from './components/HelpixLogo.vue'
+export { default as EmptyState } from './components/EmptyState.vue'
+export { default as CopyButton } from './components/CopyButton.vue'
 export {
   Card,
   CardContent,

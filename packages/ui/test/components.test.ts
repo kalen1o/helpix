@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick, ref } from 'vue'
-import { Badge, Button, Card, cn, Dialog, DialogContent, HelpixLogo, Input } from '../src/index'
+import { Badge, Button, Card, cn, CopyButton, Dialog, DialogContent, EmptyState, HelpixLogo, Input } from '../src/index'
 
 // jsdom does not implement modal dialogs; emulate the parts we rely on.
 beforeAll(() => {
@@ -111,10 +111,43 @@ describe('Dialog', () => {
     await nextTick()
     expect(vm.open).toBe(false)
 
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
     vm.open = true
     await nextTick()
+    now.mockReturnValue(1300)
+    await w.find('dialog').trigger('pointerdown')
     await w.find('dialog').trigger('click')
     expect(vm.open).toBe(false)
+    now.mockRestore()
+    w.unmount()
+  })
+
+  it('ignores a backdrop click right after opening (the second click of a double-click)', async () => {
+    const w = mount(Harness, { attachTo: document.body })
+    const vm = w.vm as unknown as { open: boolean }
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
+    vm.open = true
+    await nextTick()
+    now.mockReturnValue(1100)
+    await w.find('dialog').trigger('pointerdown')
+    await w.find('dialog').trigger('click')
+    expect(vm.open).toBe(true)
+    now.mockRestore()
+    w.unmount()
+  })
+
+  it('does not close when a press starts inside the content and ends on the backdrop (text selection)', async () => {
+    const w = mount(Harness, { attachTo: document.body })
+    const vm = w.vm as unknown as { open: boolean }
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
+    vm.open = true
+    await nextTick()
+    await nextTick()
+    now.mockReturnValue(2000)
+    await w.find('.inside').trigger('pointerdown')
+    await w.find('dialog').trigger('click')
+    expect(vm.open).toBe(true)
+    now.mockRestore()
     w.unmount()
   })
 
@@ -126,6 +159,78 @@ describe('Dialog', () => {
     await nextTick()
     await w.find('.inside').trigger('click')
     expect(vm.open).toBe(true)
+    w.unmount()
+  })
+})
+
+describe('design polish', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('Button gives press feedback and only transitions specific properties', () => {
+    const classes = mount(Button).classes()
+    expect(classes).toContain('active:scale-[0.97]')
+    expect(classes.some((c) => c === 'transition-all')).toBe(false)
+  })
+
+  it('Button destructive-outline is a quiet destructive style', () => {
+    const classes = mount(Button, { props: { variant: 'destructive-outline' } }).classes()
+    expect(classes).toContain('text-destructive')
+    expect(classes).not.toContain('bg-destructive')
+  })
+
+  it('Badge renders a status dot and soft tints', () => {
+    const w = mount(Badge, { props: { variant: 'negative', dot: true }, slots: { default: 'suspended' } })
+    expect(w.classes()).toContain('bg-destructive/10')
+    expect(w.find('span[aria-hidden="true"]').exists()).toBe(true)
+    expect(w.text()).toBe('suspended')
+  })
+
+  it('EmptyState shows title, description and the action slot', () => {
+    const w = mount(EmptyState, {
+      props: { title: 'No tenants yet', description: 'Create one.' },
+      slots: { default: '<button>Create</button>' },
+    })
+    expect(w.text()).toContain('No tenants yet')
+    expect(w.text()).toContain('Create one.')
+    expect(w.find('button').text()).toBe('Create')
+  })
+
+  it('CopyButton copies, confirms, and resets; reports failure without throwing', async () => {
+    vi.useFakeTimers()
+    const writeText = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('denied'))
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const w = mount(CopyButton, { props: { value: 'wk_123' } })
+
+    await w.trigger('click')
+    await Promise.resolve()
+    await nextTick()
+    expect(writeText).toHaveBeenCalledWith('wk_123')
+    expect(w.text()).toBe('Copied')
+    vi.advanceTimersByTime(1500)
+    await nextTick()
+    expect(w.text()).toBe('Copy')
+
+    await w.trigger('click')
+    await Promise.resolve()
+    await nextTick()
+    expect(w.text()).toBe('Copy failed')
+  })
+
+  it('DialogContent keeps its content during the exit transition, then unmounts it', async () => {
+    const Harness = defineComponent({
+      components: { Dialog, DialogContent },
+      setup: () => ({ open: ref(true) }),
+      template: `<Dialog v-model:open="open"><DialogContent><p class="inside">Hi</p></DialogContent></Dialog>`,
+    })
+    const w = mount(Harness, { attachTo: document.body })
+    vi.useFakeTimers()
+    ;(w.vm as unknown as { open: boolean }).open = false
+    await nextTick()
+    await nextTick()
+    expect(w.find('.inside').exists()).toBe(true)
+    vi.advanceTimersByTime(150)
+    await nextTick()
+    expect(w.find('.inside').exists()).toBe(false)
     w.unmount()
   })
 })

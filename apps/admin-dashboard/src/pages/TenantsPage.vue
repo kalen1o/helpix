@@ -2,14 +2,16 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { TenantView } from '@helpix/shared/api-types'
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@helpix/ui'
+import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@helpix/ui'
 import { ApiError } from '@/api/client'
 import { api } from '@/auth/session'
+import { formatDate } from '@/lib/format'
 import { slugify } from '@/lib/slugify'
 
 const router = useRouter()
 const tenants = ref<TenantView[]>([])
 const loadError = ref<string | null>(null)
+const loaded = ref(false)
 
 const createOpen = ref(false)
 const name = ref('')
@@ -49,40 +51,77 @@ onMounted(async () => {
     tenants.value = (await api.get<{ tenants: TenantView[] }>('/admin/tenants')).tenants
   } catch (e) {
     loadError.value = e instanceof ApiError ? e.message : 'Could not load tenants'
+  } finally {
+    loaded.value = true
   }
 })
 </script>
 
 <template>
   <div class="grid gap-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Tenants</h1>
-      <Button @click="openCreate">New tenant</Button>
+    <div class="flex items-end justify-between gap-4">
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-semibold">Tenants</h1>
+        <p class="text-sm text-muted-foreground">
+          {{ loaded && !loadError ? `${tenants.length} ${tenants.length === 1 ? 'shop' : 'shops'} using helpix` : 'Shops using helpix' }}
+        </p>
+      </div>
+      <Button v-if="tenants.length > 0" @click="openCreate">New tenant</Button>
     </div>
-    <p v-if="loadError" class="text-sm text-destructive">{{ loadError }}</p>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Slug</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Created</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow v-for="t in tenants" :key="t.id" class="cursor-pointer" @click="router.push(`/tenants/${t.id}`)">
-          <TableCell class="font-medium">{{ t.name }}</TableCell>
-          <TableCell class="text-muted-foreground">{{ t.slug }}</TableCell>
-          <TableCell>
-            <Badge :variant="t.status === 'active' ? 'secondary' : 'destructive'">{{ t.status }}</Badge>
-          </TableCell>
-          <TableCell>{{ new Date(t.createdAt).toLocaleDateString() }}</TableCell>
-        </TableRow>
-        <TableRow v-if="tenants.length === 0 && !loadError">
-          <TableCell colspan="4" class="text-center text-muted-foreground">No tenants yet.</TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+    <p v-if="loadError" class="text-sm text-destructive" role="alert">{{ loadError }}</p>
+
+    <Card v-if="loaded && !loadError" class="gap-0 overflow-hidden py-0">
+      <EmptyState
+        v-if="tenants.length === 0"
+        title="No tenants yet"
+        description="A tenant is one shop. Create it, then add its admins and the sites where its widget may run."
+      >
+        <Button @click="openCreate">Create your first tenant</Button>
+      </EmptyState>
+      <Table v-else>
+        <TableHeader>
+          <TableRow class="hover:bg-transparent">
+            <TableHead class="pl-6">Name</TableHead>
+            <TableHead>Slug</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead class="w-10 pr-6"><span class="sr-only">Open</span></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <!-- The name link stretches over the whole row, so rows are clickable and keyboard-reachable. -->
+          <TableRow
+            v-for="t in tenants"
+            :key="t.id"
+            class="group relative hover:bg-accent/60 focus-within:bg-accent/60"
+          >
+            <TableCell class="py-3 pl-6 font-medium">
+              <RouterLink
+                :to="`/tenants/${t.id}`"
+                class="after:absolute after:inset-0 focus-visible:outline-none"
+              >{{ t.name }}</RouterLink>
+            </TableCell>
+            <TableCell class="font-mono text-xs text-muted-foreground">{{ t.slug }}</TableCell>
+            <TableCell>
+              <Badge :variant="t.status === 'active' ? 'positive' : 'negative'" dot>{{ t.status }}</Badge>
+            </TableCell>
+            <TableCell class="text-muted-foreground">{{ formatDate(t.createdAt) }}</TableCell>
+            <TableCell class="pr-6 text-muted-foreground">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                class="size-4 transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+              ><path d="m9 18 6-6-6-6" /></svg>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </Card>
 
     <Dialog v-model:open="createOpen">
       <DialogContent>

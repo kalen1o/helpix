@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>helpix admin</title>
+    <script>
+      // Apply the saved theme before first paint so the page never flashes the wrong theme.
+      // Keep the key in sync with THEME_STORAGE_KEY in src/lib/theme.ts.
+      (function () {
+        try {
+          var saved = localStorage.getItem('helpix.theme')
+          var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) document.documentElement.classList.add('dark')
+        } catch (e) {}
+      })()
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
