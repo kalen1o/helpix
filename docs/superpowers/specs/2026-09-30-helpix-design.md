@@ -249,7 +249,7 @@ pdfcn was considered for file browsing and rejected: it is a React library for g
 **Branding.** Helpix's own surfaces (dashboard, widget chrome, docs) follow `brand/brand-sheet.html` (v1), with logo files in `brand/logo/`:
 - Mint is the only accent; everything else is a tinted neutral. Mint 600 `#0C9A82` is for the logo, icons and the widget launcher. Mint 600 fails AA for small text on white (3.5:1), so primary buttons and links use Mint 700 `#08705F`. Dark surfaces use Night `#0F1716` with Mint 400 `#3FD1B5`.
 - Type: Bricolage Grotesque for the wordmark and large headings (the wordmark is always lowercase `helpix`), Instrument Sans for interface and body text, IBM Plex Mono for code and keys.
-- The logo is the "h + pixel" mark. It is used as supplied: no rotation, stretching, off-palette recolouring, moved pixel, shadows, outlines or gradients. The smallest mark is 16 px and the smallest lockup is 72 px wide.
+- The logo is the "h + pixel" mark. Wherever the logo appears, use the outlined lockup files in `brand/logo/lockup/` (or their geometry), never the wordmark typed as live text. It is used as supplied: no rotation, stretching, off-palette recolouring, moved pixel, shadows, outlines or gradients. The smallest mark is 16 px and the smallest lockup is 72 px wide.
 - `@helpix/ui` carries these as its default theme tokens and exports a `HelpixLogo` component. The demo shops override the tokens with their own palettes, because they represent other companies' brands.
 
 ## 9. Error handling conventions
