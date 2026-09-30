@@ -11,6 +11,7 @@ make setup    # npm install; creates .env from .env.example (then change the sec
 make start    # Docker stack (postgres :5433, tenant-auth, gateway http://localhost:4000) + dashboard http://localhost:5173
 make dev      # or: hot reload — postgres in Docker, tenant-auth/gateway/dashboard run locally; Ctrl-C stops all
 make down     # stop the Docker stack (data is kept)
+make reset-db # delete ALL data and reseed the super-admin from .env (asks first; FORCE=1 skips)
 ```
 
 Run `make` to list every target. Without make: `docker compose up -d --build` then `npm run dev -w apps/admin-dashboard`.

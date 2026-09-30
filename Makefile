@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start dev up down logs ps db dashboard test typecheck smoke
+.PHONY: help setup start dev up down logs ps db reset-db dashboard test typecheck smoke
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -44,6 +44,14 @@ ps: ## Show Docker stack status
 
 db: ## Start only Postgres (host port 5433)
 	docker compose up -d --wait postgres
+
+reset-db: .env ## Delete ALL data, recreate the databases and reseed the super-admin from .env (asks first; FORCE=1 skips)
+	@if [ "$(FORCE)" != "1" ]; then \
+	  read -r -p "This permanently deletes all Helpix data (tenants, admins, test DB). Type 'yes' to continue: " ans; \
+	  [ "$$ans" = "yes" ] || { echo "Aborted."; exit 1; }; \
+	fi
+	docker compose down -v
+	$(MAKE) up
 
 dashboard: ## Run the admin dashboard dev server (http://localhost:5173)
 	npm run dev -w apps/admin-dashboard
