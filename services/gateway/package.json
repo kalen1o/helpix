@@ -1,0 +1,19 @@
+{
+  "name": "@helpix/gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@helpix/shared": "*",
+    "fastify": "^5.12.5",
+    "tsx": "^4.23.15",
+    "undici": "^8.11.2"
+  }
+}
