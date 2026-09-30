@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start dev up down logs ps db reset-db dashboard test typecheck smoke
+.PHONY: help setup start dev up down logs ps db reset-db dashboard test typecheck smoke screenshots
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -64,3 +64,6 @@ typecheck: ## Typecheck all workspaces
 
 smoke: ## End-to-end smoke test through the gateway (needs the stack running)
 	npm run smoke
+
+screenshots: ## Capture README screenshots of the dashboard (needs the stack + dashboard running; uses Google Chrome)
+	npm run screenshots
