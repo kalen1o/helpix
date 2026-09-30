@@ -20,6 +20,7 @@ export const router = createRouter({
       children: [
         { path: '', redirect: '/login' },
         { path: 'tenants', component: () => import('@/pages/TenantsPage.vue'), meta: { role: 'super_admin' } },
+        { path: 'tenants/:id', component: () => import('@/pages/TenantDetailPage.vue'), meta: { role: 'super_admin' } },
         { path: 'home', component: () => import('@/pages/TenantHomePage.vue'), meta: { role: 'tenant_admin' } },
       ],
     },
