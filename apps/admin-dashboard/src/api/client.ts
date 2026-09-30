@@ -32,6 +32,9 @@ type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 export function createApiClient(opts: ApiClientOptions) {
   const doFetch = opts.fetch ?? ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args))
   let refreshing: Promise<boolean> | null = null
+  // Bumped by invalidate() (logout/login). A refresh that started under an older generation must not touch
+  // the token store when it completes, or it would undo a logout or clobber a newer session.
+  let generation = 0
 
   function send(method: Method, path: string, body: unknown, accessToken?: string): Promise<Response> {
     const headers: Record<string, string> = {}
@@ -45,22 +48,33 @@ export function createApiClient(opts: ApiClientOptions) {
   }
 
   function refreshOnce(): Promise<boolean> {
-    refreshing ??= (async () => {
+    if (refreshing) return refreshing
+    const started = generation
+    const p: Promise<boolean> = (async () => {
       const current = opts.tokens.get()
       if (!current) return false
       const res = await send('POST', '/auth/refresh', { refreshToken: current.refreshToken })
       if (!res.ok) {
+        if (generation !== started) return false
         opts.tokens.set(null)
         opts.onSessionExpired?.()
         return false
       }
       const s = (await res.json()) as Tokens
+      if (generation !== started) return false
       opts.tokens.set({ accessToken: s.accessToken, refreshToken: s.refreshToken })
       return true
     })().finally(() => {
-      refreshing = null
+      if (refreshing === p) refreshing = null
     })
-    return refreshing
+    refreshing = p
+    return p
+  }
+
+  /** Discards any in-flight refresh result. Call before clearing or replacing the stored tokens. */
+  function invalidate(): void {
+    generation++
+    refreshing = null
   }
 
   async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
@@ -78,6 +92,7 @@ export function createApiClient(opts: ApiClientOptions) {
 
   return {
     request,
+    invalidate,
     get: <T>(path: string) => request<T>('GET', path),
     post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
     patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),

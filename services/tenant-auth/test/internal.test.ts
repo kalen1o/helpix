@@ -3,7 +3,7 @@ import type { Db } from '@helpix/shared'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createTokenService } from '../src/lib/tokens'
 import { setTenantStatus } from '../src/repos/tenants'
-import { buildTestApp, internalHeaders, resetDb, seedAdmin, seedTenant, setupTestDb, TEST_CONFIG } from './helpers'
+import { buildTestApp, internalHeaders, resetDb, resolverHeaders, seedAdmin, seedTenant, setupTestDb, superAdminHeaders, TEST_CONFIG } from './helpers'
 
 let db: Db
 let app: FastifyInstance
@@ -18,9 +18,33 @@ beforeEach(async () => {
 afterEach(async () => { await app.close() })
 
 const resolveAdmin = (accessToken: string) =>
-  app.inject({ method: 'POST', url: '/internal/resolve-admin', headers: internalHeaders(), payload: { accessToken } })
+  app.inject({ method: 'POST', url: '/internal/resolve-admin', headers: resolverHeaders(), payload: { accessToken } })
 const resolveWidget = (widgetKey: string, origin: string | null) =>
-  app.inject({ method: 'POST', url: '/internal/resolve-widget', headers: internalHeaders(), payload: { widgetKey, origin } })
+  app.inject({ method: 'POST', url: '/internal/resolve-widget', headers: resolverHeaders(), payload: { widgetKey, origin } })
+
+describe('internal caller header', () => {
+  const routes = [
+    { url: '/internal/resolve-admin', payload: { accessToken: 'x' } },
+    { url: '/internal/resolve-widget', payload: { widgetKey: 'wk_x', origin: null } },
+  ]
+
+  it.each(routes)('rejects $url with a valid internal token but no x-internal-caller', async ({ url, payload }) => {
+    const res = await app.inject({ method: 'POST', url, headers: internalHeaders(), payload })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error).toMatchObject({ code: 'forbidden', requestId: expect.any(String) })
+  })
+
+  it.each(routes)('rejects $url forwarded as a super-admin request with the wrong caller', async ({ url, payload }) => {
+    const res = await app.inject({
+      method: 'POST',
+      url,
+      headers: { ...superAdminHeaders('00000000-0000-0000-0000-000000000001'), 'x-internal-caller': 'gateway' },
+      payload,
+    })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error.code).toBe('forbidden')
+  })
+})
 
 describe('POST /internal/resolve-admin', () => {
   it('requires the internal token', async () => {

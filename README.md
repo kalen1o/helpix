@@ -29,6 +29,7 @@ TypeScript is pinned to ~5.9 at the root (vue-tsc does not support TS 7).
 ## Layout
 
 - `services/gateway` — the only public entry point; resolves credentials into identity headers.
+  It caches admin-token resolutions for up to 30 s (`RESOLVE_CACHE_TTL_MS`), so suspending a tenant or revoking an admin takes effect at the gateway within that window.
 - `services/tenant-auth` — tenants, admins, widget keys, sessions. Reachable only through the gateway.
 - `packages/shared` — error format, header names, DB helpers, API types.
 - `packages/ui` — shared Tailwind components (`@helpix/ui`) and theme tokens.

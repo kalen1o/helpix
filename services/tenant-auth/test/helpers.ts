@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { createPool, HEADERS, migrate, type Db } from '@helpix/shared'
+import { createPool, HEADERS, INTERNAL_CALLER_RESOLVER, migrate, type Db } from '@helpix/shared'
 import type { AdminView, Role, TenantStatus, TenantView } from '@helpix/shared/api-types'
 import { TEST_DATABASE_URL } from '@helpix/shared/testing'
 import { buildApp } from '../src/app'
@@ -11,7 +11,7 @@ import { createTenant, setTenantStatus, updateTenant } from '../src/repos/tenant
 export const TEST_CONFIG: Config = {
   port: 0,
   databaseUrl: TEST_DATABASE_URL,
-  internalToken: 'test-internal-token',
+  internalToken: 'tenant-auth-test-internal-token-0123456789',
   adminJwtSecret: 'test-secret-test-secret-test-secret-1234',
   accessTtl: '15m',
   refreshTtlDays: 30,
@@ -35,6 +35,11 @@ export function buildTestApp(db: Db) {
 
 export function internalHeaders(): Record<string, string> {
   return { [HEADERS.internalToken]: TEST_CONFIG.internalToken }
+}
+
+/** Headers the gateway's resolver client sends to `/internal/*`. */
+export function resolverHeaders(): Record<string, string> {
+  return { ...internalHeaders(), [HEADERS.internalCaller]: INTERNAL_CALLER_RESOLVER }
 }
 
 export function superAdminHeaders(adminId: string): Record<string, string> {

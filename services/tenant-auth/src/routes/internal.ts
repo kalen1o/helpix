@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { AppError } from '@helpix/shared'
+import { AppError, HEADERS, INTERNAL_CALLER_RESOLVER } from '@helpix/shared'
 import type { ResolvedAdmin, ResolvedWidget } from '@helpix/shared/api-types'
 import { assertAdminActive } from '../auth/service'
 import type { RouteDeps } from '../deps'
@@ -23,6 +23,15 @@ const resolveWidgetBody = {
 } as const
 
 export const internalRoutes: FastifyPluginAsync<RouteDeps> = async (app, { db, tokens }) => {
+  // Defence in depth: the internal token alone is not enough, because the gateway attaches it to every
+  // forwarded client request. Only the gateway's resolver client sends this header (the gateway strips it
+  // from client requests).
+  app.addHook('onRequest', async (req) => {
+    if (req.headers[HEADERS.internalCaller] !== INTERNAL_CALLER_RESOLVER) {
+      throw new AppError(403, 'forbidden', 'Internal route')
+    }
+  })
+
   app.post<{ Body: { accessToken: string } }>(
     '/internal/resolve-admin',
     { schema: { body: resolveAdminBody } },

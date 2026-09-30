@@ -26,7 +26,7 @@ const createTenantBody = {
   required: ['name', 'slug'],
   additionalProperties: false,
   properties: {
-    name: { type: 'string', minLength: 1, maxLength: 100 },
+    name: { type: 'string', minLength: 1, maxLength: 100, pattern: '\\S' },
     slug: { type: 'string', minLength: 1, maxLength: 50, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' },
   },
 } as const
@@ -36,7 +36,7 @@ const patchTenantBody = {
   additionalProperties: false,
   minProperties: 1,
   properties: {
-    name: { type: 'string', minLength: 1, maxLength: 100 },
+    name: { type: 'string', minLength: 1, maxLength: 100, pattern: '\\S' },
     allowedOrigins: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 200 } },
   },
 } as const

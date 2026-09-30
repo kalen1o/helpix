@@ -15,13 +15,13 @@ const json = (status: number, body?: unknown) =>
   new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 /** Protected routes accept only 'new-access'; refresh accepts only 'r1'. */
-function fakeBackend(opts: { refreshOk?: boolean } = {}) {
+function fakeBackend(opts: { refreshOk?: boolean; refreshGate?: Promise<void> } = {}) {
   const calls: { url: string; init: RequestInit }[] = []
   const fetch = vi.fn(async (url: string | URL | Request, init: RequestInit = {}) => {
     const u = String(url)
     calls.push({ url: u, init })
     if (u.endsWith('/auth/refresh')) {
-      await new Promise((r) => setTimeout(r, 5))
+      await (opts.refreshGate ?? new Promise((r) => setTimeout(r, 5)))
       return opts.refreshOk === false
         ? json(401, { error: { code: 'invalid_refresh_token', message: 'Session expired', requestId: 'r' } })
         : json(200, { accessToken: 'new-access', refreshToken: 'r2', admin: {} })
@@ -75,6 +75,41 @@ describe('createApiClient', () => {
     await expect(api.get('/me')).rejects.toMatchObject({ status: 401 })
     expect(tokens.value).toBeNull()
     expect(onSessionExpired).toHaveBeenCalledOnce()
+  })
+
+  it('discards a refresh that was in flight when the session was invalidated (logout)', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    const { fetch, calls } = fakeBackend({ refreshGate: gate })
+    const tokens = memoryStore({ accessToken: 'old-access', refreshToken: 'r1' })
+    const onSessionExpired = vi.fn()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens, fetch, onSessionExpired })
+    const pending = api.get('/me')
+    await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/auth/refresh'))).toBe(true))
+    api.invalidate()
+    tokens.set(null)
+    release()
+    await expect(pending).rejects.toMatchObject({ status: 401 })
+    expect(tokens.value).toBeNull()
+    expect(onSessionExpired).not.toHaveBeenCalled()
+    expect(calls.map((c) => c.url)).toEqual(['http://gw/me', 'http://gw/auth/refresh'])
+  })
+
+  it('does not clear a newer session when a stale refresh fails after invalidation', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    const { fetch, calls } = fakeBackend({ refreshOk: false, refreshGate: gate })
+    const tokens = memoryStore({ accessToken: 'old-access', refreshToken: 'r1' })
+    const onSessionExpired = vi.fn()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens, fetch, onSessionExpired })
+    const pending = api.get('/me')
+    await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/auth/refresh'))).toBe(true))
+    api.invalidate()
+    tokens.set({ accessToken: 'fresh-login', refreshToken: 'r9' })
+    release()
+    await expect(pending).rejects.toMatchObject({ status: 401 })
+    expect(tokens.value).toEqual({ accessToken: 'fresh-login', refreshToken: 'r9' })
+    expect(onSessionExpired).not.toHaveBeenCalled()
   })
 
   it('does not try to refresh when there is no session (e.g. a failed login)', async () => {

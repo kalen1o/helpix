@@ -56,6 +56,17 @@ describe('tenants', () => {
     expect(res.json().error.code).toBe('validation_error')
   })
 
+  it('rejects a whitespace-only name with 400 on create and PATCH', async () => {
+    const created = await asRoot('POST', '/admin/tenants', { name: '   ', slug: 'blank' })
+    expect(created.statusCode).toBe(400)
+    expect(created.json().error.code).toBe('validation_error')
+    const t = await seedTenant(db, { name: 'Keep', slug: 'keep' })
+    const patched = await asRoot('PATCH', `/admin/tenants/${t.id}`, { name: ' \t ' })
+    expect(patched.statusCode).toBe(400)
+    expect(patched.json().error.code).toBe('validation_error')
+    expect((await asRoot('GET', `/admin/tenants/${t.id}`)).json().name).toBe('Keep')
+  })
+
   it('lists tenants', async () => {
     await seedTenant(db, { slug: 'one' })
     await seedTenant(db, { slug: 'two' })

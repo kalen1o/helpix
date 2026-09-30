@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { AdminView, TenantView } from '@helpix/shared/api-types'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@helpix/ui'
@@ -65,6 +65,11 @@ async function runAction(path: string, close: () => void) {
   }
 }
 
+// A stale failure from an earlier attempt must not greet the next dialog.
+watch([statusDialogOpen, rotateDialogOpen], ([status, rotate]) => {
+  if (status || rotate) actionError.value = null
+})
+
 const toggleStatus = () =>
   runAction(tenant.value?.status === 'active' ? '/suspend' : '/reactivate', () => (statusDialogOpen.value = false))
 const rotateKey = () => runAction('/widget-key/rotate', () => (rotateDialogOpen.value = false))
@@ -121,7 +126,6 @@ onMounted(load)
         {{ tenant.status === 'active' ? 'Suspend' : 'Reactivate' }}
       </Button>
     </div>
-    <p v-if="actionError" class="text-sm text-destructive" role="alert">{{ actionError }}</p>
 
     <Card>
       <CardHeader>
@@ -197,6 +201,7 @@ onMounted(load)
       :confirm-label="tenant.status === 'active' ? 'Suspend' : 'Reactivate'"
       :destructive="tenant.status === 'active'"
       :busy="busy"
+      :error="actionError"
       @confirm="toggleStatus"
     />
     <ConfirmDialog
@@ -206,6 +211,7 @@ onMounted(load)
       confirm-label="Rotate key"
       destructive
       :busy="busy"
+      :error="actionError"
       @confirm="rotateKey"
     />
   </div>

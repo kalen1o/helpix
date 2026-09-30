@@ -8,6 +8,8 @@ defineProps<{
   confirmLabel: string
   destructive?: boolean
   busy?: boolean
+  /** Shown inside the dialog, so a failed action is visible above the modal backdrop. */
+  error?: string | null
 }>()
 const emit = defineEmits<{ 'update:open': [value: boolean]; confirm: [] }>()
 </script>
@@ -19,6 +21,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean]; confirm: [] }>()
         <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>{{ description }}</DialogDescription>
       </DialogHeader>
+      <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
       <DialogFooter>
         <Button variant="outline" @click="emit('update:open', false)">Cancel</Button>
         <Button :variant="destructive ? 'destructive' : 'default'" :disabled="busy" @click="emit('confirm')">

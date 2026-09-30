@@ -2,6 +2,7 @@ import { PassThrough, type Readable } from 'node:stream'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { request, type Dispatcher } from 'undici'
 import { AppError, HEADERS, IDENTITY_HEADERS } from '@helpix/shared'
+import { upstreamUrl } from './path'
 
 const HOP_BY_HOP = new Set([
   'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
@@ -11,6 +12,10 @@ const STRIP_FROM_CLIENT = new Set([...IDENTITY_HEADERS, 'authorization', HEADERS
 
 export interface ForwardOptions {
   target: string
+  /** Prefix of the matched route (e.g. `/auth`); the forwarded path must stay under it. */
+  routePrefix: string
+  /** The validated path and raw query string from `canonicalPath()`; forwarded instead of `req.url`. */
+  path: { pathname: string; search: string }
   internalToken: string
   identity?: Record<string, string>
 }
@@ -28,6 +33,7 @@ export function enforceBodyLimit(limit: number) {
 }
 
 export async function forward(req: FastifyRequest, reply: FastifyReply, opts: ForwardOptions): Promise<FastifyReply> {
+  const url = upstreamUrl(opts.target, opts.path, opts.routePrefix)
   const headers: Record<string, string> = {}
   for (const [name, value] of Object.entries(req.headers)) {
     if (value === undefined || HOP_BY_HOP.has(name) || STRIP_FROM_CLIENT.has(name)) continue
@@ -54,7 +60,7 @@ export async function forward(req: FastifyRequest, reply: FastifyReply, opts: Fo
   }
   let upstream: Dispatcher.ResponseData
   try {
-    upstream = await request(opts.target + req.url, {
+    upstream = await request(url, {
       method: req.method as Dispatcher.HttpMethod,
       headers,
       body,

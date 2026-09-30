@@ -6,6 +6,7 @@ import type { ResolvedAdmin } from '@helpix/shared/api-types'
 import { TtlCache } from './cache'
 import type { GatewayConfig } from './config'
 import { enforceBodyLimit, forward } from './forward'
+import { canonicalPath } from './path'
 import { createTenantAuthClient, type TenantAuthClient } from './tenantAuthClient'
 
 export interface GatewayDeps {
@@ -61,19 +62,30 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
   app.route({
     method: [...METHODS],
     url: '/auth/*',
-    handler: (req, reply) => forward(req, reply, { target: config.tenantAuthUrl, internalToken: config.internalToken }),
+    handler: (req, reply) =>
+      forward(req, reply, {
+        target: config.tenantAuthUrl,
+        internalToken: config.internalToken,
+        routePrefix: '/auth',
+        path: canonicalPath(req.url, '/auth'),
+      }),
   })
 
-  for (const url of ['/me', '/admin/*']) {
+  for (const [url, routePrefix] of [['/me', '/me'], ['/admin/*', '/admin']] as const) {
     app.route({
       method: [...METHODS],
       url,
-      handler: async (req, reply) =>
-        forward(req, reply, {
+      handler: async (req, reply) => {
+        // Validate the path before resolving the bearer token so a traversal attempt never reaches tenant-auth.
+        const path = canonicalPath(req.url, routePrefix)
+        return forward(req, reply, {
           target: config.tenantAuthUrl,
           internalToken: config.internalToken,
+          routePrefix,
+          path,
           identity: await adminIdentity(req),
-        }),
+        })
+      },
     })
   }
 

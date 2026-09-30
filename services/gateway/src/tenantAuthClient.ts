@@ -1,4 +1,4 @@
-import { AppError, HEADERS } from '@helpix/shared'
+import { AppError, HEADERS, INTERNAL_CALLER_RESOLVER } from '@helpix/shared'
 import type { ResolvedAdmin } from '@helpix/shared/api-types'
 
 export interface TenantAuthClient {
@@ -11,7 +11,12 @@ export function createTenantAuthClient(baseUrl: string, internalToken: string): 
     try {
       res = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', [HEADERS.internalToken]: internalToken, [HEADERS.requestId]: requestId },
+        headers: {
+          'content-type': 'application/json',
+          [HEADERS.internalToken]: internalToken,
+          [HEADERS.internalCaller]: INTERNAL_CALLER_RESOLVER,
+          [HEADERS.requestId]: requestId,
+        },
         body: JSON.stringify(body),
       })
     } catch {

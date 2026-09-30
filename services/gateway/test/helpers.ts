@@ -1,3 +1,4 @@
+import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import Fastify from 'fastify'
 import type { GatewayConfig } from '../src/config'
@@ -29,10 +30,36 @@ export async function startEcho() {
   return { url: `http://127.0.0.1:${port}`, calls, close: () => app.close() }
 }
 
+/**
+ * Sends a request with the path written verbatim on the request line. `inject()` and `fetch()` both run the
+ * URL through WHATWG parsing, which resolves `..` and `%2e%2e` before the gateway sees them, so traversal
+ * tests must go over a real socket.
+ */
+export function rawRequest(
+  port: number,
+  opts: { method: string; path: string; headers?: Record<string, string>; body?: string },
+): Promise<{ status: number; json: any }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: '127.0.0.1', port, method: opts.method, path: opts.path, headers: opts.headers },
+      (res) => {
+        let text = ''
+        res.setEncoding('utf8')
+        res.on('data', (c) => (text += c))
+        res.on('end', () => resolve({ status: res.statusCode!, json: text ? JSON.parse(text) : null }))
+      },
+    )
+    req.on('error', reject)
+    req.end(opts.body)
+  })
+}
+
+export const TEST_INTERNAL_TOKEN = 'gateway-test-internal-token-0123456789'
+
 export function testConfig(tenantAuthUrl: string): GatewayConfig {
   return {
     port: 0,
-    internalToken: 'internal-secret',
+    internalToken: TEST_INTERNAL_TOKEN,
     tenantAuthUrl,
     corsOrigins: ['http://localhost:5173'],
     bodyLimitBytes: 1024,

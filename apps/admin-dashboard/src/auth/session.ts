@@ -34,6 +34,7 @@ export const session = {
 
   async login(email: string, password: string): Promise<MeResponse> {
     const s = await api.post<SessionResponse>('/auth/login', { email, password })
+    api.invalidate()
     tokenStore.set({ accessToken: s.accessToken, refreshToken: s.refreshToken })
     return session.loadMe()
   },
@@ -46,6 +47,7 @@ export const session = {
 
   async logout(): Promise<void> {
     const tokens = tokenStore.get()
+    api.invalidate()
     tokenStore.set(null)
     state.me = null
     if (tokens) await api.post('/auth/logout', { refreshToken: tokens.refreshToken }).catch(() => {})

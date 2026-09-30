@@ -1,8 +1,9 @@
 import net, { type AddressInfo } from 'node:net'
 import type { FastifyInstance } from 'fastify'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ResolvedAdmin } from '@helpix/shared/api-types'
 import { buildGateway } from '../src/app'
-import { startEcho, testConfig } from './helpers'
+import { rawRequest, startEcho, TEST_INTERNAL_TOKEN, testConfig } from './helpers'
 
 let echo: Awaited<ReturnType<typeof startEcho>>
 let gw: FastifyInstance
@@ -35,7 +36,7 @@ describe('gateway forwarding', () => {
     const call = echo.calls[0]!
     expect(call.url).toBe('/auth/login?x=1')
     expect(JSON.parse(call.body!)).toEqual({ email: 'a@b.co', password: 'pw' })
-    expect(call.headers['x-internal-token']).toBe('internal-secret')
+    expect(call.headers['x-internal-token']).toBe(TEST_INTERNAL_TOKEN)
     expect(call.headers['x-request-id']).toBe(res.headers['x-request-id'])
   })
 
@@ -61,8 +62,18 @@ describe('gateway forwarding', () => {
     expect(h['x-helpix-role']).toBeUndefined()
     expect(h['x-admin-id']).toBeUndefined()
     expect(h.authorization).toBeUndefined()
-    expect(h['x-internal-token']).toBe('internal-secret')
+    expect(h['x-internal-token']).toBe(TEST_INTERNAL_TOKEN)
     expect(h['x-request-id']).not.toBe('spoofed')
+  })
+
+  it('strips a client-supplied x-internal-caller header', async () => {
+    await gw.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: { 'content-type': 'application/json', 'x-internal-caller': 'resolver' },
+      payload: '{}',
+    })
+    expect(echo.calls[0]!.headers['x-internal-caller']).toBeUndefined()
   })
 
   it('rejects bodies over the limit with 413 without calling upstream', async () => {
@@ -89,6 +100,79 @@ describe('gateway forwarding', () => {
     expect(res.statusCode).toBe(502)
     expect(res.json().error.code).toBe('upstream_unavailable')
     await down.close()
+  })
+})
+
+describe('gateway path canonicalization (raw request line)', () => {
+  let g: FastifyInstance
+  let port: number
+  const resolveAdmin = vi.fn(async (): Promise<ResolvedAdmin> => ({ adminId: 'admin-super', role: 'super_admin', tenantId: null }))
+
+  beforeEach(async () => {
+    resolveAdmin.mockClear()
+    g = await buildGateway({ config: testConfig(echo.url), tenantAuth: { resolveAdmin } })
+    await g.listen({ port: 0, host: '127.0.0.1' })
+    port = (g.server.address() as AddressInfo).port
+  })
+  afterEach(async () => {
+    await g.close()
+  })
+
+  const post = (path: string, headers: Record<string, string> = {}) =>
+    rawRequest(port, { method: 'POST', path, headers: { 'content-type': 'application/json', ...headers }, body: '{"accessToken":"x"}' })
+
+  it.each([
+    '/auth/../internal/resolve-admin',
+    '/auth/%2e%2e/internal/resolve-admin',
+    '/auth/.%2E/internal/resolve-widget',
+    '/auth/%2E%2E/internal/resolve-widget',
+    '/auth/%2e%2e/admin/tenants',
+    '/auth/..%2finternal/x',
+    '/auth/..%2Finternal/x',
+    '/auth/%5c..%5cinternal/x',
+    '/auth/%5C..%5Cinternal/x',
+    '/auth/\\..\\internal/x',
+    '/auth/./login',
+    '/auth/%2e/login',
+    '/auth/login/..',
+    '/auth/x/../../internal/resolve-admin?y=1',
+    '/auth/%2e%2e',
+  ])('rejects %s with 404 not_found without calling upstream', async (path) => {
+    const res = await post(path)
+    expect(res.status).toBe(404)
+    expect(res.json.error).toMatchObject({ code: 'not_found', requestId: expect.any(String) })
+    expect(echo.calls).toHaveLength(0)
+  })
+
+  it.each([
+    '/admin/%2e%2e/internal/resolve-admin',
+    '/admin/../internal/resolve-admin',
+    '/admin/tenants/%2E%2E/%2e%2e/internal/resolve-widget',
+  ])('rejects %s with a valid bearer before resolving identity or calling upstream', async (path) => {
+    const res = await post(path, { authorization: 'Bearer super-token' })
+    expect(res.status).toBe(404)
+    expect(res.json.error.code).toBe('not_found')
+    expect(echo.calls).toHaveLength(0)
+    expect(resolveAdmin).not.toHaveBeenCalled()
+  })
+
+  it('forwards a normal path with a query string unchanged', async () => {
+    const res = await post('/auth/login?x=1&next=%2Fadmin%2F..%2Finternal')
+    expect(res.status).toBe(200)
+    expect(echo.calls).toHaveLength(1)
+    expect(echo.calls[0]!.url).toBe('/auth/login?x=1&next=%2Fadmin%2F..%2Finternal')
+  })
+
+  it('forwards /me and /admin/* with a valid bearer unchanged', async () => {
+    await rawRequest(port, { method: 'GET', path: '/me', headers: { authorization: 'Bearer super-token' } })
+    await rawRequest(port, { method: 'GET', path: '/admin/tenants/abc/admins?page=2', headers: { authorization: 'Bearer super-token' } })
+    expect(echo.calls.map((c) => c.url)).toEqual(['/me', '/admin/tenants/abc/admins?page=2'])
+  })
+
+  it('forwards a double-encoded dot segment verbatim, so the upstream never sees a dot segment', async () => {
+    const res = await post('/auth/%252e%252e/internal/resolve-admin')
+    expect(res.status).toBe(200)
+    expect(echo.calls[0]!.url).toBe('/auth/%252e%252e/internal/resolve-admin')
   })
 })
 

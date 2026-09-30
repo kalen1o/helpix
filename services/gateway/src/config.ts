@@ -13,9 +13,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
     if (!v) throw new Error(`Missing required env var ${key}`)
     return v
   }
+  const internalToken = required('INTERNAL_TOKEN')
+  if (internalToken.length < 32) throw new Error('INTERNAL_TOKEN must be at least 32 characters')
   return {
     port: Number(env.PORT ?? 4000),
-    internalToken: required('INTERNAL_TOKEN'),
+    internalToken,
     tenantAuthUrl: required('TENANT_AUTH_URL'),
     corsOrigins: (env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((s) => s.trim()).filter(Boolean),
     bodyLimitBytes: Number(env.BODY_LIMIT_BYTES ?? 1_048_576),

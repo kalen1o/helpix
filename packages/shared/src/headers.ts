@@ -5,7 +5,12 @@ export const HEADERS = {
   adminId: 'x-admin-id',
   requestId: 'x-request-id',
   internalToken: 'x-internal-token',
+  /** Names the internal caller of tenant-auth `/internal/*` routes; only the gateway's resolver client sends it. */
+  internalCaller: 'x-internal-caller',
 } as const
+
+/** The only accepted value of `HEADERS.internalCaller` on tenant-auth `/internal/*` routes. */
+export const INTERNAL_CALLER_RESOLVER = 'resolver'
 
 /** Headers only the gateway may set. The gateway strips these from client requests. */
 export const IDENTITY_HEADERS: readonly string[] = [
@@ -14,4 +19,5 @@ export const IDENTITY_HEADERS: readonly string[] = [
   HEADERS.role,
   HEADERS.adminId,
   HEADERS.internalToken,
+  HEADERS.internalCaller,
 ]

@@ -1,4 +1,6 @@
 // End-to-end check of step 1 through the gateway. Run with the stack up: `npm run smoke`.
+import http from 'node:http'
+
 const BASE = process.env.GATEWAY_URL ?? 'http://localhost:4000'
 const SUPER_EMAIL = process.env.SEED_SUPERADMIN_EMAIL ?? 'admin@helpix.local'
 const SUPER_PASSWORD = process.env.SEED_SUPERADMIN_PASSWORD ?? 'change-me-please'
@@ -15,6 +17,25 @@ async function call(method, path, { token, body, headers = {} } = {}) {
   })
   const text = await res.text()
   return { status: res.status, json: text ? JSON.parse(text) : null, requestId: res.headers.get('x-request-id') }
+}
+
+// Sends the path verbatim on the request line. fetch() resolves `..` and `%2e%2e` client-side, which would
+// hide a gateway traversal bug, so traversal probes go through node:http instead.
+function rawPost(path, body) {
+  const url = new URL(BASE)
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: url.hostname, port: url.port, method: 'POST', path, headers: { 'content-type': 'application/json' } },
+      (res) => {
+        let text = ''
+        res.setEncoding('utf8')
+        res.on('data', (c) => (text += c))
+        res.on('end', () => resolve({ status: res.statusCode, json: text ? JSON.parse(text) : null }))
+      },
+    )
+    req.on('error', reject)
+    req.end(JSON.stringify(body))
+  })
 }
 
 function check(condition, label, detail) {
@@ -53,6 +74,11 @@ check(forbidden.status === 403 && forbidden.json.error.requestId === forbidden.r
 
 const internal = await call('POST', '/internal/resolve-admin', { body: { accessToken: rootToken } })
 check(internal.status === 404, 'internal routes are not exposed', internal.json)
+
+for (const path of ['/auth/../internal/resolve-admin', '/auth/%2e%2e/internal/resolve-widget']) {
+  const probe = await rawPost(path, { accessToken: rootToken, widgetKey: tenant.json.widgetKey, origin: null })
+  check(probe.status === 404 && probe.json?.error?.code === 'not_found', `gateway rejects traversal ${path}`, probe)
+}
 
 const suspended = await call('POST', `/admin/tenants/${tenantId}/suspend`, { token: rootToken })
 check(suspended.status === 200 && suspended.json.status === 'suspended', 'suspend tenant', suspended.json)
