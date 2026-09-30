@@ -1,18 +1,26 @@
 import { randomUUID } from 'node:crypto'
-import Fastify, { type FastifyInstance } from 'fastify'
-import { HEADERS, registerErrorHandler } from '@helpix/shared'
+import cors from '@fastify/cors'
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify'
+import { AppError, HEADERS, registerErrorHandler } from '@helpix/shared'
+import type { ResolvedAdmin } from '@helpix/shared/api-types'
+import { TtlCache } from './cache'
 import type { GatewayConfig } from './config'
 import { enforceBodyLimit, forward } from './forward'
+import { createTenantAuthClient, type TenantAuthClient } from './tenantAuthClient'
 
 export interface GatewayDeps {
   config: GatewayConfig
   logger?: boolean
+  tenantAuth?: TenantAuthClient
 }
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 
 export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> {
   const { config } = deps
+  const tenantAuth = deps.tenantAuth ?? createTenantAuthClient(config.tenantAuthUrl, config.internalToken)
+  const adminCache = new TtlCache<ResolvedAdmin>(config.resolveCacheTtlMs)
+
   const app = Fastify({ logger: deps.logger ?? false, genReqId: () => randomUUID() })
 
   // Bodies are streamed through untouched; size is enforced from Content-Length.
@@ -25,6 +33,29 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
     reply.header(HEADERS.requestId, req.id)
   })
 
+  await app.register(cors, {
+    origin: config.corsOrigins,
+    methods: [...METHODS],
+    allowedHeaders: ['content-type', 'authorization'],
+    exposedHeaders: [HEADERS.requestId],
+  })
+
+  async function adminIdentity(req: FastifyRequest): Promise<Record<string, string>> {
+    const match = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')
+    if (!match) throw new AppError(401, 'unauthorized', 'Missing bearer token')
+    const token = match[1]!
+    let identity = adminCache.get(token)
+    if (!identity) {
+      identity = await tenantAuth.resolveAdmin(token, req.id)
+      adminCache.set(token, identity)
+    }
+    return {
+      [HEADERS.adminId]: identity.adminId,
+      [HEADERS.role]: identity.role,
+      ...(identity.tenantId ? { [HEADERS.tenantId]: identity.tenantId } : {}),
+    }
+  }
+
   app.get('/health', async () => ({ ok: true }))
 
   app.route({
@@ -32,6 +63,19 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
     url: '/auth/*',
     handler: (req, reply) => forward(req, reply, { target: config.tenantAuthUrl, internalToken: config.internalToken }),
   })
+
+  for (const url of ['/me', '/admin/*']) {
+    app.route({
+      method: [...METHODS],
+      url,
+      handler: async (req, reply) =>
+        forward(req, reply, {
+          target: config.tenantAuthUrl,
+          internalToken: config.internalToken,
+          identity: await adminIdentity(req),
+        }),
+    })
+  }
 
   return app
 }
