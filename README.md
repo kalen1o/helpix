@@ -4,24 +4,25 @@ Multitenant AI customer-support platform. Design: `docs/superpowers/specs/2026-0
 
 ## Run locally
 
-Requirements: Node 22, Docker.
+Requirements: Node 22, Docker, make.
 
 ```bash
-cp .env.example .env          # then change the secrets
-npm install
-docker compose up -d --build  # postgres (host port 5433), tenant-auth, gateway (http://localhost:4000)
-npm run dev -w apps/admin-dashboard   # http://localhost:5173
+make setup    # npm install; creates .env from .env.example (then change the secrets)
+make start    # Docker stack (postgres :5433, tenant-auth, gateway http://localhost:4000) + dashboard http://localhost:5173
+make dev      # or: hot reload — postgres in Docker, tenant-auth/gateway/dashboard run locally; Ctrl-C stops all
+make down     # stop the Docker stack (data is kept)
 ```
+
+Run `make` to list every target. Without make: `docker compose up -d --build` then `npm run dev -w apps/admin-dashboard`.
 
 Log in with `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` from `.env`.
 
 ## Test
 
 ```bash
-npm run db:up      # tests use the helpix_test database on port 5433
-npm test
-npm run typecheck
-npm run smoke      # end-to-end through the gateway; needs the full stack running
+make test       # starts postgres if needed; tests use the helpix_test database on port 5433
+make typecheck
+make smoke      # end-to-end through the gateway; needs the full stack running (make up)
 ```
 
 TypeScript is pinned to ~5.9 at the root (vue-tsc does not support TS 7).
