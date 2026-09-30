@@ -49,11 +49,11 @@ async function submit() {
         <form class="grid gap-4" @submit.prevent="submit">
           <div class="grid gap-2">
             <Label for="email">Email</Label>
-            <Input id="email" v-model="email" type="email" autocomplete="username" required />
+            <Input id="email" v-model="email" type="email" autocomplete="username" placeholder="you@shop.com" required />
           </div>
           <div class="grid gap-2">
             <Label for="password">Password</Label>
-            <Input id="password" v-model="password" type="password" autocomplete="current-password" required />
+            <Input id="password" v-model="password" type="password" autocomplete="current-password" placeholder="Your password" required />
           </div>
           <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
           <Button type="submit" class="mt-1 w-full" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</Button>

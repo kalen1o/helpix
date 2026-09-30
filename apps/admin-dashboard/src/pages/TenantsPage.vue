@@ -132,11 +132,11 @@ onMounted(async () => {
         <form id="create-tenant" class="grid gap-4" @submit.prevent="create">
           <div class="grid gap-2">
             <Label for="tenant-name">Name</Label>
-            <Input id="tenant-name" v-model="name" required maxlength="100" />
+            <Input id="tenant-name" v-model="name" placeholder="e.g. iStore Saigon" required maxlength="100" />
           </div>
           <div class="grid gap-2">
             <Label for="tenant-slug">Slug</Label>
-            <Input id="tenant-slug" v-model="slug" required maxlength="50" @input="slugEdited = true" />
+            <Input id="tenant-slug" v-model="slug" class="font-mono" placeholder="istore-saigon" required maxlength="50" @input="slugEdited = true" />
             <p class="text-xs text-muted-foreground">Lowercase letters, numbers and dashes.</p>
           </div>
           <p v-if="createError" class="text-sm text-destructive" role="alert">{{ createError }}</p>

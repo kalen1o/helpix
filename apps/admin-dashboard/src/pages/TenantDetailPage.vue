@@ -157,7 +157,7 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
         <CardDescription>Origins where the widget may run, one per line, e.g. https://shop.example</CardDescription>
       </CardHeader>
       <CardContent class="grid gap-3">
-        <Textarea v-model="originsText" rows="4" class="font-mono text-xs" placeholder="https://shop.example" @input="originsSaved = false" />
+        <Textarea v-model="originsText" rows="4" class="font-mono text-xs" placeholder="https://shop.example&#10;http://localhost:5174" @input="originsSaved = false" />
         <div class="flex items-center gap-3">
           <Button size="sm" :disabled="!originsDirty || savingOrigins" @click="saveOrigins">Save</Button>
           <Transition
@@ -202,11 +202,11 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
           <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" @submit.prevent="createAdmin">
             <div class="grid gap-2">
               <Label for="admin-email">Email</Label>
-              <Input id="admin-email" v-model="newAdminEmail" type="email" required />
+              <Input id="admin-email" v-model="newAdminEmail" type="email" placeholder="owner@shop.com" required />
             </div>
             <div class="grid gap-2">
               <Label for="admin-password">Temporary password</Label>
-              <Input id="admin-password" v-model="newAdminPassword" type="password" minlength="8" required />
+              <Input id="admin-password" v-model="newAdminPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" required />
             </div>
             <Button type="submit">Add admin</Button>
           </form>
