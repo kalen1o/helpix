@@ -4,6 +4,8 @@ import type { Config } from './config'
 import type { RouteDeps } from './deps'
 import { createTokenService } from './lib/tokens'
 import { authRoutes } from './routes/auth'
+import { meRoutes } from './routes/me'
+import { tenantRoutes } from './routes/tenants'
 
 export interface AppOptions {
   db: Db
@@ -22,5 +24,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     tokens: createTokenService(opts.config.adminJwtSecret, opts.config.accessTtl),
   }
   await app.register(authRoutes, deps)
+  await app.register(meRoutes, deps)
+  await app.register(tenantRoutes, deps)
   return app
 }
