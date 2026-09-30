@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Consumers import this file, so the UI package's own templates are scanned for classes. */
+@source "..";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #F4F7F6;
+  --foreground: #101A18;
+  --card: #FFFFFF;
+  --card-foreground: #101A18;
+  --primary: #08705F;
+  --primary-foreground: #FFFFFF;
+  --brand: #0C9A82;
+  --brand-bright: #3FD1B5;
+  --secondary: #E3F4EF;
+  --secondary-foreground: #101A18;
+  --muted: #EAF0EE;
+  --muted-foreground: #56645F;
+  --accent: #E3F4EF;
+  --accent-foreground: #101A18;
+  --destructive: #C2413A;
+  --border: #DCE3E0;
+  --input: #DCE3E0;
+  --ring: #0C9A82;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #0B100F;
+  --foreground: #E9F0EE;
+  --card: #131A19;
+  --card-foreground: #E9F0EE;
+  --primary: #2FC3A7;
+  --primary-foreground: #0F1716;
+  --brand: #3FD1B5;
+  --brand-bright: #3FD1B5;
+  --secondary: #11302A;
+  --secondary-foreground: #E9F0EE;
+  --muted: #1A2322;
+  --muted-foreground: #97A6A1;
+  --accent: #11302A;
+  --accent-foreground: #E9F0EE;
+  --destructive: #F0776F;
+  --border: #25302D;
+  --input: #25302D;
+  --ring: #2FC3A7;
+}
+
+@theme inline {
+  --font-sans: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  h1, h2 {
+    @apply font-display tracking-tight;
+  }
+}
