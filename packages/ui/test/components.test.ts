@@ -228,7 +228,11 @@ describe('design polish', () => {
     await nextTick()
     await nextTick()
     expect(w.find('.inside').exists()).toBe(true)
+    // The longest exit is the bottom sheet sliding away (200ms, globals.css).
     vi.advanceTimersByTime(150)
+    await nextTick()
+    expect(w.find('.inside').exists()).toBe(true)
+    vi.advanceTimersByTime(50)
     await nextTick()
     expect(w.find('.inside').exists()).toBe(false)
     w.unmount()

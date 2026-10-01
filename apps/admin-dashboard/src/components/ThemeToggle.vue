@@ -1,32 +1,21 @@
 <script setup lang="ts">
-import { cn } from '@helpix/ui'
+import { computed } from 'vue'
+import { SegmentedControl, type SegmentedOption } from '@helpix/ui'
 import { useTheme, type ThemePreference } from '@/lib/theme'
 
 const { preference, setPreference } = useTheme()
+const model = computed({ get: () => preference.value, set: setPreference })
 
-const OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: 'light', label: 'Light theme' },
-  { value: 'dark', label: 'Dark theme' },
-  { value: 'system', label: 'Match system theme' },
+const OPTIONS: SegmentedOption<ThemePreference>[] = [
+  { value: 'light', label: 'Light', title: 'Light theme' },
+  { value: 'dark', label: 'Dark', title: 'Dark theme' },
+  { value: 'system', label: 'System', title: 'Match system theme' },
 ]
 </script>
 
 <template>
-  <div role="group" aria-label="Theme" class="inline-flex items-center gap-0.5 rounded-md border bg-card p-0.5">
-    <button
-      v-for="option in OPTIONS"
-      :key="option.value"
-      type="button"
-      :title="option.label"
-      :aria-label="option.label"
-      :aria-pressed="preference === option.value"
-      :class="cn(
-        'grid size-7 place-items-center rounded-[5px] text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.94]',
-        'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        preference === option.value && 'bg-secondary text-foreground',
-      )"
-      @click="setPreference(option.value)"
-    >
+  <SegmentedControl v-model="model" :options="OPTIONS" label="Theme" icon-only>
+    <template #option="{ option }">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true">
         <template v-if="option.value === 'light'">
           <circle cx="12" cy="12" r="4" />
@@ -38,6 +27,6 @@ const OPTIONS: { value: ThemePreference; label: string }[] = [
           <path d="M8 21h8M12 17v4" />
         </template>
       </svg>
-    </button>
-  </div>
+    </template>
+  </SegmentedControl>
 </template>

@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-01",
+  "design_md": "DESIGN.md (helpix-v1) — locked system",
+  "fonts": "Bricolage Grotesque + Instrument Sans + IBM Plex Mono (Google Fonts, apps/admin-dashboard/index.html L24)",
+  "palette": "Hex tokens in :root/.dark + Tailwind v4 @theme inline (packages/ui/src/styles/globals.css)",
+  "motion": "motion-cut: no motion library; CSS only, --ease-out/--ease-in-out overrides (globals.css L83-85)",
+  "spacing": "Tailwind 4px scale",
+  "framework": "Vue 3.5 + Vite 8 + Tailwind 4, vue-router 5, in-house @helpix/ui"
+}

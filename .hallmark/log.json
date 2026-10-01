@@ -1,0 +1,9 @@
+[
+  {
+    "date": "2026-10-01",
+    "macrostructure": "n/a (app dashboard: DESIGN.md modular panels)",
+    "theme": "helpix-v1 (DESIGN.md)",
+    "enrichment": "none",
+    "brief": "helpix admin dashboard rebuild on DESIGN.md + Apple-style motion (motion-v springs, swipe sheets)"
+  }
+]

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import type { AgentConfig, AgentConfigState, ChatModelsResponse } from '@helpix/shared/api-types'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@helpix/ui'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader, vEnter } from '@helpix/ui'
 import { ApiError } from '@/api/client'
-import { api, session } from '@/auth/session'
+import { api } from '@/auth/session'
 import AgentSettingsForm from '@/components/agent/AgentSettingsForm.vue'
 import PlaygroundPanel from '@/components/agent/PlaygroundPanel.vue'
 import { configProblem, sameAgentConfig } from '@/lib/agent'
@@ -66,31 +66,28 @@ onMounted(load)
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <div class="grid gap-1">
-        <p class="text-sm text-muted-foreground">{{ session.state.me?.tenant?.name }}</p>
-        <h1 class="text-2xl font-semibold">Agent</h1>
-        <p class="text-sm text-muted-foreground">How the assistant on your shop speaks, and what it is told to do.</p>
-      </div>
-      <div v-if="form" class="flex flex-wrap items-center gap-2">
+    <PageHeader title="Agent" description="How the assistant on your shop speaks, and what it is told to do.">
+      <template v-if="form" #badge>
         <Badge v-if="dirty" variant="secondary">Unsaved changes</Badge>
         <Badge v-else-if="live" variant="positive" dot>Live</Badge>
         <Badge v-else variant="outline">Draft not published</Badge>
+      </template>
+      <template v-if="form" #actions>
         <Button variant="outline" :disabled="!dirty || !!problem || busy !== null" @click="act('save')">
           {{ busy === 'save' ? 'Saving…' : 'Save draft' }}
         </Button>
         <Button :disabled="(live && !dirty) || !!problem || busy !== null" @click="act('publish')">
           {{ busy === 'publish' ? 'Publishing…' : 'Publish' }}
         </Button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <p v-if="pageError" class="text-sm text-destructive" role="alert">{{ pageError }}</p>
     <p v-if="actionError" class="text-sm text-destructive" role="alert">{{ actionError }}</p>
     <p v-if="notice" class="text-sm text-muted-foreground" role="status">{{ notice }}</p>
 
     <div v-if="form" class="grid items-start gap-6 lg:grid-cols-2">
-      <Card>
+      <Card v-enter="0">
         <CardHeader>
           <CardTitle>Settings</CardTitle>
           <CardDescription>Changes are saved as a draft. Publishing makes them live on your shop.</CardDescription>
@@ -100,7 +97,7 @@ onMounted(load)
           <p v-if="problem" class="text-sm text-destructive" role="alert">{{ problem }}</p>
         </CardContent>
       </Card>
-      <PlaygroundPanel :config="form" :disabled="!!problem" />
+      <PlaygroundPanel v-enter="1" :config="form" :disabled="!!problem" />
     </div>
   </div>
 </template>

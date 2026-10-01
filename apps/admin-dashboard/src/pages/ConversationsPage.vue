@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import type { ConversationListResponse, ConversationSummary } from '@helpix/shared/api-types'
-import { Button, Card, CardContent, EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@helpix/ui'
+import { Button, Card, EmptyState, PageHeader, SegmentedControl, type SegmentedOption, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, vEnter } from '@helpix/ui'
 import { ApiError } from '@/api/client'
-import { api, session } from '@/auth/session'
+import { api } from '@/auth/session'
 import { customerLabel } from '@/lib/chat'
 import { formatDateTime } from '@/lib/format'
 
 type Kind = 'real' | 'playground'
-const KINDS: { value: Kind; label: string }[] = [
+const KINDS: SegmentedOption<Kind>[] = [
   { value: 'real', label: 'Customers' },
   { value: 'playground', label: 'Playground' },
 ]
@@ -58,47 +58,39 @@ onMounted(() => load())
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <div class="grid gap-1">
-        <p class="text-sm text-muted-foreground">{{ session.state.me?.tenant?.name }}</p>
-        <h1 class="text-2xl font-semibold">Conversations</h1>
-        <p class="text-sm text-muted-foreground">Every chat with the agent, with the documents it used for each reply.</p>
-      </div>
-      <div role="group" aria-label="Conversation type" class="inline-flex rounded-md border p-0.5 text-sm">
-        <button
-          v-for="k in KINDS"
-          :key="k.value"
-          type="button"
-          :aria-pressed="kind === k.value"
-          class="rounded px-3 py-1 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          :class="kind === k.value ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'"
-          @click="kind = k.value"
-        >
-          {{ k.label }}
-        </button>
-      </div>
-    </div>
+    <PageHeader title="Conversations" description="Every chat with the agent, with the documents it used for each reply.">
+      <template #actions>
+        <SegmentedControl v-model="kind" :options="KINDS" label="Conversation type" />
+      </template>
+    </PageHeader>
 
     <p v-if="error && items.length === 0" class="text-sm text-destructive" role="alert">{{ error }}</p>
 
-    <Card v-if="loaded && (!error || items.length > 0)" class="py-0">
-      <CardContent class="px-0">
-        <EmptyState v-if="items.length === 0" :title="EMPTY[kind].title" :description="EMPTY[kind].description" />
-        <Table v-else>
+    <Card v-if="loaded && (!error || items.length > 0)" v-enter="0" class="gap-0 overflow-hidden py-0">
+      <EmptyState v-if="items.length === 0" :title="EMPTY[kind].title" :description="EMPTY[kind].description" />
+      <div v-else class="relative overflow-x-auto overflow-y-hidden">
+        <Table>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead class="pl-6">Who</TableHead>
               <TableHead>First message</TableHead>
               <TableHead class="text-right">Messages</TableHead>
-              <TableHead class="pr-6">Last activity</TableHead>
+              <TableHead>Last activity</TableHead>
+              <TableHead class="w-10 pr-6"><span class="sr-only">Open</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="c in items" :key="c.id">
+            <!-- The name link stretches over the whole row, so rows are clickable and keyboard-reachable. -->
+            <TableRow
+              v-for="(c, i) in items"
+              :key="c.id"
+              v-enter="i + 1"
+              class="group relative hover:bg-muted/50 focus-within:bg-muted/50"
+            >
               <TableCell class="py-3 pl-6">
                 <RouterLink
                   :to="`/conversations/${c.id}`"
-                  class="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  class="whitespace-nowrap font-medium after:absolute after:inset-0 focus-visible:outline-none"
                 >
                   {{ customerLabel(c) }}
                 </RouterLink>
@@ -106,12 +98,24 @@ onMounted(() => load())
               <TableCell class="max-w-80">
                 <p class="truncate text-muted-foreground" :title="c.preview">{{ c.preview }}</p>
               </TableCell>
-              <TableCell class="text-right tabular-nums text-muted-foreground">{{ c.messageCount }}</TableCell>
-              <TableCell class="whitespace-nowrap pr-6 text-muted-foreground">{{ formatDateTime(c.updatedAt) }}</TableCell>
+              <TableCell class="text-right font-mono text-xs tabular-nums text-muted-foreground">{{ c.messageCount }}</TableCell>
+              <TableCell class="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">{{ formatDateTime(c.updatedAt) }}</TableCell>
+              <TableCell class="pr-6 text-muted-foreground">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  class="size-4 transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+                ><path d="m9 18 6-6-6-6" /></svg>
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>
-      </CardContent>
+      </div>
     </Card>
 
     <p v-if="error && items.length > 0" class="text-center text-sm text-destructive" role="alert">{{ error }}</p>

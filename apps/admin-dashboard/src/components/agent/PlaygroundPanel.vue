@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref } from 'vue'
 import type { AgentConfig, ChatRole, ChatToolEvent } from '@helpix/shared/api-types'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Textarea } from '@helpix/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, prefersReducedMotion, Textarea } from '@helpix/ui'
 import { ApiError } from '@/api/client'
 import { api } from '@/auth/session'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -28,9 +28,13 @@ let controller: AbortController | null = null
 let nextId = 0
 let lastMessage = ''
 
-async function scrollToEnd() {
+/** Glide to a new message; while a reply streams, follow it instantly so the scroll never lags the text. */
+async function scrollToEnd(smooth = false) {
   await nextTick()
-  if (list.value) list.value.scrollTop = list.value.scrollHeight
+  const el = list.value
+  if (!el) return
+  if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto' })
+  else el.scrollTop = el.scrollHeight
 }
 
 async function send(text = draft.value.trim()) {
@@ -41,7 +45,7 @@ async function send(text = draft.value.trim()) {
   turns.value.push({ id: nextId++, role: 'assistant', content: '', tools: [], pending: true, error: null })
   // The reactive proxy, so the template follows the updates below.
   const reply = turns.value[turns.value.length - 1]!
-  void scrollToEnd()
+  void scrollToEnd(true)
 
   const ac = new AbortController()
   controller = ac
@@ -124,14 +128,14 @@ onBeforeUnmount(() => controller?.abort())
     <CardContent class="grid gap-4">
       <div
         ref="list"
-        class="grid max-h-[28rem] min-h-56 content-start gap-3 overflow-y-auto rounded-lg border bg-background p-3"
+        class="grid max-h-[28rem] min-h-56 content-start gap-3 overflow-y-auto overscroll-contain rounded-lg border bg-background p-3"
         aria-live="polite"
         aria-label="Playground conversation"
       >
         <p v-if="turns.length === 0" class="m-auto max-w-64 py-12 text-center text-sm text-muted-foreground">
           Ask what a customer would, like “Can I return an opened item?”
         </p>
-        <MessageBubble v-for="t in turns" :key="t.id" :role="t.role" :content="t.content" :tools="t.tools" :pending="t.pending">
+        <MessageBubble v-for="t in turns" :key="t.id" :role="t.role" :content="t.content" :tools="t.tools" :pending="t.pending" appear>
           <template v-if="t.error" #footer>
             <p class="max-w-[85%] text-xs text-destructive" role="alert">{{ t.error }}</p>
             <Button v-if="t.id === turns[turns.length - 1]?.id && !sending && !disabled" variant="outline" size="sm" @click="retry">Try again</Button>

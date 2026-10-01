@@ -21,6 +21,11 @@ export const CardDescription = styled('CardDescription', 'p', 'text-sm text-mute
 export const CardContent = styled('CardContent', 'div', 'px-6')
 export const CardFooter = styled('CardFooter', 'div', 'flex items-center px-6')
 
+/** Mono eyebrow for panels and metadata: "DOCUMENTS", "LAST 7 DAYS". */
+export const MonoLabel = styled('MonoLabel', 'span', 'font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground')
+/** A nested surface inside a card. One level only; never a card inside a card. */
+export const InsetPanel = styled('InsetPanel', 'div', 'rounded-lg border bg-muted/50 p-4')
+
 export const Table = styled('Table', 'table', 'w-full caption-bottom text-sm')
 export const TableHeader = styled('TableHeader', 'thead', '[&_tr]:border-b')
 export const TableBody = styled('TableBody', 'tbody', '[&_tr:last-child]:border-0')
