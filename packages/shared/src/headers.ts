@@ -12,6 +12,9 @@ export const HEADERS = {
 /** The only accepted value of `HEADERS.internalCaller` on tenant-auth `/internal/*` routes. */
 export const INTERNAL_CALLER_RESOLVER = 'resolver'
 
+/** The `HEADERS.internalCaller` value chat-service sends to tenant-auth `/internal/agent-config/*`. */
+export const INTERNAL_CALLER_CHAT = 'chat'
+
 /** Headers only the gateway may set. The gateway strips these from client requests. */
 export const IDENTITY_HEADERS: readonly string[] = [
   HEADERS.tenantId,

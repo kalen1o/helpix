@@ -22,6 +22,9 @@ export const router = createRouter({
         { path: 'tenants', component: () => import('@/pages/TenantsPage.vue'), meta: { role: 'super_admin' } },
         { path: 'tenants/:id', component: () => import('@/pages/TenantDetailPage.vue'), meta: { role: 'super_admin' } },
         { path: 'kb', component: () => import('@/pages/KnowledgeBasePage.vue'), meta: { role: 'tenant_admin' } },
+        { path: 'agent', component: () => import('@/pages/AgentPage.vue'), meta: { role: 'tenant_admin' } },
+        { path: 'conversations', component: () => import('@/pages/ConversationsPage.vue'), meta: { role: 'tenant_admin' } },
+        { path: 'conversations/:id', component: () => import('@/pages/ConversationDetailPage.vue'), meta: { role: 'tenant_admin' } },
         // Step 1 sent tenant admins to /home; keep old bookmarks working.
         { path: 'home', redirect: '/kb' },
       ],

@@ -162,4 +162,37 @@ describe('createApiClient', () => {
     expect(await api.del('/empty')).toBeUndefined()
     expect(calls[0]!.init.method).toBe('DELETE')
   })
+
+  it('put sends JSON with PUT', async () => {
+    const { fetch, calls } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    await api.put('/agent/config/draft', { prompt: 'x' })
+    expect(calls[0]!.init.method).toBe('PUT')
+    expect(calls[0]!.init.body).toBe(JSON.stringify({ prompt: 'x' }))
+  })
+
+  it('stream resolves with the unread 2xx response and passes the abort signal', async () => {
+    const { fetch, calls } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    const ac = new AbortController()
+    const res = await api.stream('/chat/playground', { message: 'hi' }, ac.signal)
+    expect(res.bodyUsed).toBe(false)
+    expect(await res.json()).toEqual({ path: 'http://gw/chat/playground' })
+    expect(calls[0]!.init).toMatchObject({ method: 'POST', body: JSON.stringify({ message: 'hi' }), signal: ac.signal })
+  })
+
+  it('stream refreshes an expired token once and resends the body', async () => {
+    const { fetch, calls } = fakeBackend()
+    const store = memoryStore({ accessToken: 'old', refreshToken: 'r1' })
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: store, fetch })
+    expect((await api.stream('/chat/playground', { message: 'hi' })).ok).toBe(true)
+    expect(calls.map((c) => c.url)).toEqual(['http://gw/chat/playground', 'http://gw/auth/refresh', 'http://gw/chat/playground'])
+    expect(calls[2]!.init.body).toBe(JSON.stringify({ message: 'hi' }))
+  })
+
+  it('stream throws ApiError for an error status', async () => {
+    const { fetch } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    await expect(api.stream('/conflict', {})).rejects.toMatchObject({ status: 409, code: 'slug_taken' })
+  })
 })

@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import cors from '@fastify/cors'
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify'
-import { AppError, HEADERS, registerErrorHandler } from '@helpix/shared'
+import { AppError, HEADERS, registerErrorHandler, TtlCache } from '@helpix/shared'
 import type { ResolvedAdmin } from '@helpix/shared/api-types'
-import { TtlCache } from './cache'
 import type { GatewayConfig } from './config'
 import { enforceBodyLimit, forward } from './forward'
 import { canonicalPath } from './path'
@@ -82,7 +81,9 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
   for (const [url, routePrefix, target] of [
     ['/me', '/me', config.tenantAuthUrl],
     ['/admin/*', '/admin', config.tenantAuthUrl],
+    ['/agent/*', '/agent', config.tenantAuthUrl],
     ['/kb/*', '/kb', config.kbServiceUrl],
+    ['/chat/*', '/chat', config.chatServiceUrl],
   ] as const) {
     app.route({
       method: [...METHODS],

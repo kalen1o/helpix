@@ -59,15 +59,25 @@ export async function forward(req: FastifyRequest, reply: FastifyReply, opts: Fo
       if (!src.readableEnded) body!.destroy(new Error('client aborted request body'))
     })
   }
+  // Abort the upstream request if the client goes away, e.g. a chat stream the customer closed: chat-service then
+  // stops the model call instead of generating a reply nobody reads.
+  const abort = new AbortController()
+  reply.raw.once('close', () => {
+    if (!reply.raw.writableFinished) abort.abort()
+  })
+  // The client may already be gone (e.g. it left while the body was being read); 'close' will not fire again.
+  if (reply.raw.destroyed) abort.abort()
+
   let upstream: Dispatcher.ResponseData
   try {
     upstream = await request(url, {
       method: req.method as Dispatcher.HttpMethod,
       headers,
       body,
+      signal: abort.signal,
     })
   } catch (err) {
-    req.log.error({ err, target: opts.target }, 'upstream request failed')
+    if (!abort.signal.aborted) req.log.error({ err, target: opts.target }, 'upstream request failed')
     throw new AppError(502, 'upstream_unavailable', 'A backend service is unavailable')
   }
 

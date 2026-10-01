@@ -46,6 +46,25 @@ services:
       postgres:
         condition: service_healthy
 
+  chat-service:
+    build:
+      context: .
+      dockerfile: docker/node-service.Dockerfile
+    env_file: .env
+    environment:
+      SERVICE: chat-service
+      PORT: "4003"
+      DATABASE_URL: postgres://helpix:helpix@postgres:5432/helpix
+      TENANT_AUTH_URL: http://tenant-auth:4001
+      KB_SERVICE_URL: http://kb-service:4002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tenant-auth:
+        condition: service_started
+      kb-service:
+        condition: service_started
+
   gateway:
     build:
       context: .
@@ -56,11 +75,13 @@ services:
       PORT: "4000"
       TENANT_AUTH_URL: http://tenant-auth:4001
       KB_SERVICE_URL: http://kb-service:4002
+      CHAT_SERVICE_URL: http://chat-service:4003
     ports:
       - "4000:4000"
     depends_on:
       - tenant-auth
       - kb-service
+      - chat-service
 
 volumes:
   pgdata: {}
