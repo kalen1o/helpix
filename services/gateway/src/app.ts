@@ -7,6 +7,7 @@ import type { GatewayConfig } from './config'
 import { enforceBodyLimit, forward } from './forward'
 import { canonicalPath } from './path'
 import { createTenantAuthClient, type TenantAuthClient } from './tenantAuthClient'
+import { createWidgetIdentity, enforceCredentialRules, isWidgetRoute, serveWidgetBundle } from './widget'
 
 export interface GatewayDeps {
   config: GatewayConfig
@@ -28,6 +29,7 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
   const { config } = deps
   const tenantAuth = deps.tenantAuth ?? createTenantAuthClient(config.tenantAuthUrl, config.internalToken)
   const adminCache = new TtlCache<ResolvedAdmin>(config.resolveCacheTtlMs)
+  const widgetIdentity = createWidgetIdentity(tenantAuth, config.resolveCacheTtlMs)
 
   const app = Fastify({ logger: deps.logger ?? false, genReqId: () => randomUUID() })
 
@@ -41,12 +43,20 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
     reply.header(HEADERS.requestId, req.id)
   })
 
+  // Widget routes are called from shop pages on any origin; the tenant's allowed origins are enforced by the
+  // widget-key resolver, not here. Admin routes keep the dashboard allowlist.
   await app.register(cors, {
-    origin: config.corsOrigins,
-    methods: [...METHODS],
-    allowedHeaders: ['content-type', 'authorization'],
-    exposedHeaders: [HEADERS.requestId],
+    delegator: (req, cb) => {
+      const widget = isWidgetRoute(req)
+      cb(null, {
+        origin: widget ? true : config.corsOrigins,
+        methods: [...METHODS],
+        allowedHeaders: widget ? ['content-type', HEADERS.widgetKey] : ['content-type', 'authorization'],
+        exposedHeaders: [HEADERS.requestId],
+      })
+    },
   })
+  app.addHook('onRequest', enforceCredentialRules)
 
   async function adminIdentity(req: FastifyRequest): Promise<Record<string, string>> {
     const match = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')
@@ -77,6 +87,30 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
         path: canonicalPath(req.url, '/auth'),
       }),
   })
+
+  app.post('/chat/messages', async (req, reply) => {
+    const path = canonicalPath(req.url, '/chat')
+    return forward(req, reply, {
+      target: config.chatServiceUrl,
+      internalToken: config.internalToken,
+      routePrefix: '/chat',
+      path,
+      identity: await widgetIdentity(req),
+    })
+  })
+
+  app.get('/widget/config', async (req, reply) => {
+    const path = canonicalPath(req.url, '/widget')
+    return forward(req, reply, {
+      target: config.tenantAuthUrl,
+      internalToken: config.internalToken,
+      routePrefix: '/widget',
+      path,
+      identity: await widgetIdentity(req),
+    })
+  })
+
+  app.get('/widget/helpix-widget.js', serveWidgetBundle(config.widgetBundlePath))
 
   for (const [url, routePrefix, target] of [
     ['/me', '/me', config.tenantAuthUrl],

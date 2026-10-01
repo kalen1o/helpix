@@ -10,10 +10,12 @@ helpix is a multitenant AI customer-support platform: one deployment serves many
 
 ```bash
 make setup        # npm install + create .env from .env.example
-make start        # full Docker stack (gateway on :4000) + dashboard dev server on :5173
-make dev          # hot reload: postgres in Docker, services + dashboard run locally via tsx watch
+make start        # full Docker stack (gateway on :4000 serves the widget) + dashboard :5173 + Orchard Store demo :5174
+make dev          # hot reload: postgres in Docker, services + dashboard run locally via tsx watch; also builds/watches the widget and runs the demo
 make db           # start only Postgres (host port 5433, NOT 5432)
 make reset-db     # wipe all data and reseed the super-admin (FORCE=1 skips the prompt)
+make seed-demos   # create/refresh the demo shop tenant (KB, agent config, widget key) via the gateway; needs the stack running
+make demo         # Orchard Store demo dev server on :5174
 make test         # starts postgres, then runs every workspace's vitest suite
 make typecheck    # tsc / vue-tsc --noEmit in every workspace
 make smoke        # end-to-end scripts through the gateway; needs the stack running
@@ -44,6 +46,7 @@ admin-dashboard / shop widget ──► gateway :4000 ──► tenant-auth :400
 ```
 
 - **The gateway is the only public entry point.** It routes by prefix (`/auth`, `/me`, `/admin`, `/agent` → tenant-auth; `/kb` → kb-service; `/chat` → chat-service). It resolves the admin bearer token through tenant-auth's `/internal/*` resolver and caches the result for `RESOLVE_CACHE_TTL_MS` (≤30 s). It then forwards the request with identity headers (`x-tenant-id`, `x-admin-id`, `x-helpix-role`, `x-internal-token`). It strips client-supplied identity headers (`IDENTITY_HEADERS` in `packages/shared/src/headers.ts`) and streams bodies, including SSE, through without parsing them. `services/gateway/src/path.ts` rejects path traversal and any `/internal` path before routing. Treat changes there as security-sensitive.
+- **Widget calls** use `x-helpix-widget-key` + `Origin`, resolved through `/internal/resolve-widget` and cached per (key, origin). Only `POST /chat/messages` and `GET /widget/config` accept it (`services/gateway/src/widget.ts`).
 - **Backend services trust only the gateway.** Every service checks `x-internal-token` (`requireInternalToken`) and reads identity with `readContext()` from `@helpix/shared`. The tenant comes **only** from the `x-tenant-id` header, never from the body, the query or LLM tool arguments. Every query filters by `tenant_id`, and each service has `isolation.test.ts` suites that check this.
 - **Each service owns one Postgres schema** and never reads another service's tables. Cross-service data goes over HTTP with the internal token. For example, chat-service fetches agent config from tenant-auth `/internal/agent-config/*` (with `x-internal-caller: chat`) and searches the KB through kb-service.
 - **Migrations** are plain `services/<svc>/migrations/NNN_name.sql` files, applied on service startup by `migrate()` in `packages/shared/src/db.ts` (advisory-locked, recorded in `<schema>.schema_migrations`). Add a new numbered file. Never edit one that has already been applied.
@@ -53,6 +56,8 @@ admin-dashboard / shop widget ──► gateway :4000 ──► tenant-auth :400
 - **chat-service:** `turn.ts` runs one turn. It builds the prompt in a fixed order (platform rules → tenant prompt → tone → history trimmed to a token budget → user message), then runs `agent/loop.ts` with the `search_kb` tool, capped by `CHAT_MAX_TOOL_ROUNDS`. It streams `meta`/`delta`/`tool`/`done` SSE events. The user and assistant messages are stored together only when the turn succeeds. A client disconnect aborts the model call and stores nothing. Conversation ownership mismatches return the same 404 as an unknown ID.
 - **packages/llm:** separate embedding and chat providers. Both have an OpenAI-compatible implementation (GLM by default) and an offline `fake`. Chat reads only `CHAT_*` env vars and embeddings read only `EMBEDDING_*`. Never mix them. `fake` is the default for development and is what tests use.
 - **packages/shared:** exported as TS source (no build step), with subpath exports `./api-types`, `./agent-config`, `./chat`, `./sse`, `./testing`. The DTOs in `api-types.ts` are shared by the services and the dashboard.
+- **apps/widget:** Vue IIFE bundle mounted in a shadow root; Tailwind `@property` rules are re-declared for the shadow root by `shadowStyles.ts`; never add SFC `<style>` blocks. Its vitest config (and the demo's) passes `--no-experimental-webstorage` because the default shell node may be v25 (the repo pins 22 via `.nvmrc`).
+- **demos/:** sample shops (`demos/iphone-store`, the Orchard Store). Each has `seed/` (`shop.json`, `agent.json`, `kb/*.md`) that `make seed-demos` pushes through the gateway, and reads `VITE_HELPIX_GATEWAY` / `VITE_HELPIX_WIDGET_KEY` from the gitignored `.env.development.local`.
 - **packages/ui + apps/admin-dashboard:** Vue 3 + Tailwind 4 with in-house components from `@helpix/ui`. Do not add a component library. Follow `DESIGN.md` (colour tokens, type, logo usage, chat bubbles, motion), which summarises `brand/brand-sheet.html` and `packages/ui/src/styles/globals.css`. Assistant/chat text renders as plain text (`whitespace-pre-wrap`), never as HTML. Markdown documents in the KB preview are rendered with `marked` + `dompurify`.
 
 ## Environment

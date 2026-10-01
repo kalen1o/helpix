@@ -41,6 +41,15 @@ export interface ResolvedWidget {
   tenantId: string
 }
 
+/** tenant-auth → widget (`GET /widget/config`): what the widget needs before the first message. */
+export interface WidgetConfig {
+  shopName: string
+  greeting: string
+  accentColor: string
+  /** Whether order lookup is available. Always false until step 4b. */
+  orderLookup: boolean
+}
+
 export type DocumentStatus = 'processing' | 'ready' | 'failed'
 
 export interface KbDocumentView {

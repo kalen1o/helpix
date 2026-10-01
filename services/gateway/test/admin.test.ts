@@ -24,6 +24,7 @@ beforeEach(async () => {
       if (!id) throw new AppError(401, 'invalid_token', 'Invalid or expired access token')
       return id
     }),
+    resolveWidget: vi.fn(async () => { throw new AppError(401, 'invalid_widget_key', 'Unknown widget key') }),
   }
   gw = await buildGateway({ config: testConfig(echo.url), tenantAuth })
 })

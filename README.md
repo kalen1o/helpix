@@ -108,12 +108,26 @@ Run `make` to list every target. Without make: `docker compose up -d --build` th
 
 Log in with `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` from `.env`.
 
+## Chat widget and demo shop
+
+Any shop embeds the support widget with one script tag (use your gateway URL and the tenant's widget key):
+
+```html
+<script src="http://localhost:4000/widget/helpix-widget.js" data-widget-key="wk_..." defer></script>
+```
+
+To try it, start the stack (`make start` or `make dev`) and run `make seed-demos`. It creates the Orchard Store tenant with its knowledge base and published agent config, and writes the widget key to `demos/iphone-store/.env.development.local`. Then open the store at http://localhost:5174 (restart the demo dev server if it was already running). Sign in to the dashboard as the shop admin with the credentials in `demos/iphone-store/seed/shop.json`.
+
+The widget only works from origins on the tenant's allowed-origin list, which the super-admin edits on the tenant page (`make seed-demos` sets it for the demo). Pages can control it with `window.Helpix.open()` and `window.Helpix.close()`.
+
+**Shadow DOM styling.** The widget renders inside a shadow root so the shop's CSS cannot touch it. Spike results (verified in Chrome): inside a shadow root Tailwind 4's `@property` rules are ignored, so shadows, rings, transforms and gradients computed to `none`. The fix (`shadowSafeCss` in `apps/widget/src/shadowStyles.ts`) re-declares each registered `--tw-*` initial value in a `@layer properties` rule prepended to the CSS, so every utility still overrides it; with it the shadow-root rendering matched the light DOM exactly. Theme tokens must also be declared on `:host` (`:root` matches nothing in a shadow root), and `:host { all: initial }` stops the shop page's inherited font and colour leaking in. A native `<dialog>` works inside the shadow root (top layer, styled backdrop).
+
 ## Test
 
 ```bash
 make test       # starts postgres if needed; tests use the helpix_test database on port 5433
 make typecheck
-make smoke      # end-to-end through the gateway (tenants, knowledge base, agent); needs the full stack running (make up)
+make smoke      # end-to-end through the gateway (tenants, knowledge base, agent, widget); needs the full stack running (make up)
 ```
 
 > [!NOTE]

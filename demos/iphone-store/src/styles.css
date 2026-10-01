@@ -1,0 +1,26 @@
+@import "@helpix/ui/styles.css";
+@source "./";
+
+/* Orchard Store's own brand: a sleek dark palette. It overrides the helpix tokens for the storefront only;
+   the widget keeps helpix's own tokens inside its shadow root. */
+:root {
+  --background: #050506;
+  --foreground: #F5F5F7;
+  --card: #111114;
+  --card-foreground: #F5F5F7;
+  --primary: #F5F5F7;
+  --primary-foreground: #050506;
+  --secondary: #1C1C21;
+  --secondary-foreground: #F5F5F7;
+  --muted: #18181C;
+  --muted-foreground: #A1A1AA;
+  --border: #26262C;
+  --input: #26262C;
+  --ring: #8AB4FF;
+  --radius: 1rem;
+}
+
+@theme {
+  --font-sans: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-display: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+}

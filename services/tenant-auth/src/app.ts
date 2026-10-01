@@ -9,6 +9,7 @@ import { internalRoutes } from './routes/internal'
 import { internalChatRoutes } from './routes/internalChat'
 import { meRoutes } from './routes/me'
 import { tenantRoutes } from './routes/tenants'
+import { widgetRoutes } from './routes/widget'
 
 export interface AppOptions {
   db: Db
@@ -32,5 +33,6 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(tenantRoutes, deps)
   await app.register(agentConfigRoutes, deps)
   await app.register(internalChatRoutes, deps)
+  await app.register(widgetRoutes, deps)
   return app
 }

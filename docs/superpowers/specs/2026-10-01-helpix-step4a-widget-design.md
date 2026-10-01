@@ -37,6 +37,8 @@ Mount a shadow root with the compiled `@helpix/ui` CSS and check in Chrome: shad
 - (a) extract the `@property` blocks from the compiled CSS at build time and inject them once into `document.head` (they register globally and do not style the host page); or
 - (b) add a `:host, *, ::before, ::after, ::backdrop` rule that sets every `--tw-*` initial value.
 
+Outcome: `shadowSafeCss` applies (b). It also converts every `rem` in declaration blocks to `px` (x16), because rem resolves against the host page's `<html>` font-size even inside a shadow root (Shopify Dawn sets `html{font-size:62.5%}`), which would shrink the widget. Selectors are left untouched.
+
 Record the result in the plan and in the widget's README section. The spike code is not kept.
 
 ### 3.2 Build and bootstrap
@@ -67,7 +69,7 @@ Follows `DESIGN.md` and the brand sheet:
 
 ### 3.5 Tests
 
-Vitest with `@vue/test-utils` and happy-dom: the stream-event reducer, storage reset and retry on 404, the Try-again path, script-tag bootstrapping (key and API base), and mounting into a shadow root.
+Vitest with `@vue/test-utils` and jsdom: the stream-event reducer, storage reset and retry on 404, the Try-again path, script-tag bootstrapping (key and API base), and mounting into a shadow root.
 
 ## 4. iPhone demo store (`demos/iphone-store`)
 
@@ -86,7 +88,7 @@ Vitest with `@vue/test-utils` and happy-dom: the stream-event reducer, storage r
 3. Set `allowed_origins` to the demo's origin.
 4. Log in as the tenant admin. Upload each KB file whose title is not already present. Poll until all documents are `ready`, failing on `failed`.
 5. Save the draft agent config from `agent.json`, then publish it.
-6. Write `VITE_HELPIX_WIDGET_KEY` and `VITE_HELPIX_GATEWAY` to `demos/<shop>/.env.local` (gitignored).
+6. Write `VITE_HELPIX_WIDGET_KEY` and `VITE_HELPIX_GATEWAY` to `demos/<shop>/.env.development.local` (gitignored; not `.env.local`, because the committed `.env.development` would override `.env.local` in Vite's precedence).
 
 `make dev` and `make start` also start the demo dev server.
 
@@ -104,7 +106,7 @@ Vitest with `@vue/test-utils` and happy-dom: the stream-event reducer, storage r
   - the bundle route returns 404 when the file is missing
 - **tenant-auth:** `GET /widget/config` returns the published config with defaults, is tenant-isolated, and rejects requests with an admin role.
 - **Widget:** the unit tests in 3.5.
-- **Smoke:** `scripts/smoke-step4a.mjs` (through the gateway, stack running, after seeding) does the following:
+- **Smoke:** `scripts/smoke-step4a.mjs` (through the gateway, stack running; it creates its own tenant rather than using the seeded demo) does the following:
   - fetches `/widget/config` with the demo origin
   - streams one `/chat/messages` turn to `done`
   - sends a second message on the same conversation with the session token

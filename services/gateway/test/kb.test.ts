@@ -15,6 +15,7 @@ const tenantAuth: TenantAuthClient = {
     if (token !== 'tenant-token') throw new AppError(401, 'invalid_token', 'Invalid or expired access token')
     return { adminId: 'admin-a', role: 'tenant_admin' as const, tenantId: 'tenant-a' }
   }),
+  resolveWidget: vi.fn(async () => { throw new AppError(401, 'invalid_widget_key', 'Unknown widget key') }),
 }
 
 beforeEach(async () => {
