@@ -3,7 +3,7 @@ import { loadEmbeddingConfig } from '../src/config'
 
 describe('loadEmbeddingConfig', () => {
   it('defaults to the fake provider at 1024 dimensions', () => {
-    expect(loadEmbeddingConfig({})).toMatchObject({ provider: 'fake', model: 'hash', dimensions: 1024, batchMaxItems: 64, batchMaxTokens: 3000 })
+    expect(loadEmbeddingConfig({})).toMatchObject({ provider: 'fake', model: 'hash', dimensions: 1024, batchMaxItems: 64, batchMaxTokens: 1500 })
   })
 
   it('defaults the openai-compatible provider to GLM embedding-3', () => {

@@ -37,6 +37,8 @@
 
 The dashboard (`apps/admin-dashboard`) is the UI over **tenant-auth**. Every screen below talks to it through the gateway. A super-admin creates tenants (one per shop), manages each shop's widget key and allowed sites, adds the shop's admins, and can suspend a shop. Light and dark themes follow the system setting, or can be picked in the header.
 
+Tenant admins land on the **Knowledge base**: upload PDF, DOCX, Markdown or TXT files (up to 10 MB) or paste text, watch each document go from *Processing* to *Ready*, preview it (PDFs in the browser viewer, Markdown rendered, DOCX as extracted text), download or delete it, and re-index after the embedding model changes.
+
 ### 🔐 Sign in
 
 Admins sign in with email and password. tenant-auth issues a 15-minute access token and a rotating refresh token; the dashboard refreshes silently.
@@ -90,11 +92,13 @@ Suspending stops the shop's widget and blocks its admins from signing in. No dat
 
 ```bash
 make setup    # npm install; creates .env from .env.example (then change the secrets)
-make start    # Docker stack (postgres :5433, tenant-auth, gateway http://localhost:4000) + dashboard http://localhost:5173
-make dev      # or: hot reload — postgres in Docker, tenant-auth/gateway/dashboard run locally; Ctrl-C stops all
+make start    # Docker stack (postgres :5433, tenant-auth, kb-service, gateway http://localhost:4000) + dashboard http://localhost:5173
+make dev      # or: hot reload — postgres in Docker, services and dashboard run locally; Ctrl-C stops all
 make down     # stop the Docker stack (data is kept)
 make reset-db # delete ALL data and reseed the super-admin from .env (asks first; FORCE=1 skips)
 ```
+
+Embeddings default to an offline `fake` provider, which is fine for development. For real answers use GLM: set `EMBEDDING_PROVIDER=openai-compatible` and `EMBEDDING_API_KEY` in `.env` (see `.env.example`). If your `.env` predates the knowledge base, copy the `KB_SERVICE_URL` and `EMBEDDING_*` lines from `.env.example` into it. kb-service needs pgvector 0.8 or newer (the Docker image `pgvector/pgvector:pg16` provides it), because search uses `hnsw.iterative_scan`.
 
 Run `make` to list every target. Without make: `docker compose up -d --build` then `npm run dev -w apps/admin-dashboard`.
 
@@ -105,7 +109,7 @@ Log in with `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` from `.env`.
 ```bash
 make test       # starts postgres if needed; tests use the helpix_test database on port 5433
 make typecheck
-make smoke      # end-to-end through the gateway; needs the full stack running (make up)
+make smoke      # end-to-end through the gateway (tenants, then knowledge base); needs the full stack running (make up)
 ```
 
 > [!NOTE]
@@ -118,13 +122,19 @@ flowchart LR
   D[admin-dashboard<br/>Vue 3] --> G[gateway<br/>:4000]
   W[shop chat widget] --> G
   G -- identity headers --> T[tenant-auth]
-  T --> P[(PostgreSQL)]
+  G -- identity headers --> K[kb-service]
+  K -- embeddings --> L[(GLM embedding-3)]
+  T --> P[(PostgreSQL + pgvector)]
+  K --> P
+  K --> F[(KB files volume)]
 ```
 
 | Path | What it is |
 | --- | --- |
 | `services/gateway` | The only public entry point; resolves credentials into identity headers. |
 | `services/tenant-auth` | Tenants, admins, widget keys, sessions. Reachable only through the gateway. |
+| `services/kb-service` | Knowledge base: uploads, text extraction, chunking, embeddings, pgvector search, re-indexing. Reachable only through the gateway. |
+| `packages/llm` | Provider adapter: GLM / OpenAI-compatible embeddings (chat in step 3) and an offline fake. |
 | `packages/shared` | Error format, header names, DB helpers, API types. |
 | `packages/ui` | Shared Tailwind components (`@helpix/ui`) and theme tokens. |
 | `apps/admin-dashboard` | Super-admin and tenant-admin UI. |

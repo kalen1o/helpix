@@ -20,11 +20,12 @@ export interface ForwardOptions {
   identity?: Record<string, string>
 }
 
-export function enforceBodyLimit(limit: number) {
+export function enforceBodyLimit(limit: number | ((req: FastifyRequest) => number)) {
   return async (req: FastifyRequest): Promise<void> => {
+    const max = typeof limit === 'number' ? limit : limit(req)
     const len = req.headers['content-length']
-    if (len !== undefined && Number(len) > limit) {
-      throw new AppError(413, 'payload_too_large', `Request body exceeds ${limit} bytes`)
+    if (len !== undefined && Number(len) > max) {
+      throw new AppError(413, 'payload_too_large', `Request body exceeds ${max} bytes`)
     }
     if (len === undefined && req.headers['transfer-encoding']) {
       throw new AppError(411, 'length_required', 'Content-Length is required')

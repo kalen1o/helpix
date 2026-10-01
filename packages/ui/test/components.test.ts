@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { defineComponent, nextTick, ref } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { Badge, Button, Card, cn, CopyButton, Dialog, DialogContent, EmptyState, HelpixLogo, Input } from '../src/index'
 
 // jsdom does not implement modal dialogs; emulate the parts we rely on.
@@ -232,5 +232,16 @@ describe('design polish', () => {
     await nextTick()
     expect(w.find('.inside').exists()).toBe(false)
     w.unmount()
+  })
+})
+
+describe('DialogContent dialogClass', () => {
+  it('merges dialogClass into the dialog element, overriding the default width', () => {
+    const Harness = defineComponent({
+      setup: () => () => h(Dialog, { open: true }, () => h(DialogContent, { dialogClass: 'max-w-4xl' }, () => 'Body')),
+    })
+    const dialog = mount(Harness).find('dialog')
+    expect(dialog.classes()).toContain('max-w-4xl')
+    expect(dialog.classes()).not.toContain('max-w-lg')
   })
 })

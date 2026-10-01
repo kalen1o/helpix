@@ -1,7 +1,7 @@
 import type { MeResponse, Role } from '@helpix/shared/api-types'
 
 export function homeFor(me: MeResponse): string {
-  return me.admin.role === 'super_admin' ? '/tenants' : '/home'
+  return me.admin.role === 'super_admin' ? '/tenants' : '/kb'
 }
 
 /** Returns true to allow navigation, or a path to redirect to. */

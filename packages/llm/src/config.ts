@@ -22,9 +22,10 @@ export function loadEmbeddingConfig(env: NodeJS.ProcessEnv = process.env): Embed
     apiKey,
     model: env.EMBEDDING_MODEL ?? (provider === 'fake' ? 'hash' : 'embedding-3'),
     dimensions: int('EMBEDDING_DIMENSIONS', 1024),
-    // GLM embedding-3: at most 64 inputs and 3072 tokens per request.
+    // GLM embedding-3: at most 64 inputs and 3072 tokens per request. We halve the token budget because
+    // the chars-to-tokens estimate is rough for non-English Latin-script text (e.g. Vietnamese).
     batchMaxItems: int('EMBEDDING_BATCH_MAX_ITEMS', 64),
-    batchMaxTokens: int('EMBEDDING_BATCH_MAX_TOKENS', 3000),
+    batchMaxTokens: int('EMBEDDING_BATCH_MAX_TOKENS', 1500),
     timeoutMs: int('EMBEDDING_TIMEOUT_MS', 30_000),
   }
 }

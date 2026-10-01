@@ -23,11 +23,11 @@ describe('guard', () => {
 
   it('sends logged-in users away from public pages to their home', () => {
     expect(guard({ public: true }, superMe, true)).toBe('/tenants')
-    expect(guard({ public: true }, tenantMe, true)).toBe('/home')
+    expect(guard({ public: true }, tenantMe, true)).toBe('/kb')
   })
 
   it('redirects a role mismatch to the user\'s home', () => {
-    expect(guard({ role: 'super_admin' }, tenantMe, true)).toBe('/home')
+    expect(guard({ role: 'super_admin' }, tenantMe, true)).toBe('/kb')
     expect(guard({ role: 'tenant_admin' }, superMe, true)).toBe('/tenants')
   })
 
@@ -41,6 +41,6 @@ describe('guard', () => {
 
   it('homeFor maps roles', () => {
     expect(homeFor(superMe)).toBe('/tenants')
-    expect(homeFor(tenantMe)).toBe('/home')
+    expect(homeFor(tenantMe)).toBe('/kb')
   })
 })

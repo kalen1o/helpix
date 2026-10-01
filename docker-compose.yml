@@ -29,6 +29,23 @@ services:
       postgres:
         condition: service_healthy
 
+  kb-service:
+    build:
+      context: .
+      dockerfile: docker/node-service.Dockerfile
+    env_file: .env
+    environment:
+      SERVICE: kb-service
+      PORT: "4002"
+      DATABASE_URL: postgres://helpix:helpix@postgres:5432/helpix
+      KB_STORAGE_DIR: /data/kb
+    volumes:
+      # Same folder `make dev` uses, so documents uploaded in either mode stay readable in both.
+      - ./.data/kb:/data/kb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   gateway:
     build:
       context: .
@@ -38,10 +55,12 @@ services:
       SERVICE: gateway
       PORT: "4000"
       TENANT_AUTH_URL: http://tenant-auth:4001
+      KB_SERVICE_URL: http://kb-service:4002
     ports:
       - "4000:4000"
     depends_on:
       - tenant-auth
+      - kb-service
 
 volumes:
   pgdata: {}

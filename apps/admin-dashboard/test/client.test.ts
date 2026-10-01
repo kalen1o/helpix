@@ -29,6 +29,7 @@ function fakeBackend(opts: { refreshOk?: boolean; refreshGate?: Promise<void> } 
     const auth = new Headers(init.headers).get('authorization')
     if (auth !== 'Bearer new-access') return json(401, { error: { code: 'invalid_token', message: 'Expired', requestId: 'r' } })
     if (u.endsWith('/empty')) return new Response(null, { status: 204 })
+    if (u.endsWith('/file')) return new Response('PDFDATA', { status: 200, headers: { 'content-type': 'application/pdf' } })
     if (u.endsWith('/conflict')) return json(409, { error: { code: 'slug_taken', message: 'Slug taken', requestId: 'req-9' } })
     return json(200, { path: u })
   })
@@ -124,5 +125,41 @@ describe('createApiClient', () => {
     const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
     await expect(api.get('/conflict')).rejects.toMatchObject({ status: 409, code: 'slug_taken', message: 'Slug taken', requestId: 'req-9' })
     expect(await api.get('/empty')).toBeUndefined()
+  })
+
+  it('uploads FormData as-is, letting fetch set the multipart content type', async () => {
+    const { fetch, calls } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    const form = new FormData()
+    form.append('title', 'FAQ')
+    await api.upload('/kb/documents', form)
+    const headers = new Headers(calls[0]!.init.headers)
+    expect(calls[0]!.init.body).toBe(form)
+    expect(headers.get('content-type')).toBeNull()
+    expect(headers.get('authorization')).toBe('Bearer new-access')
+  })
+
+  it('re-sends the same FormData after a token refresh', async () => {
+    const { fetch, calls } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'old-access', refreshToken: 'r1' }), fetch })
+    const form = new FormData()
+    await api.upload('/kb/documents', form)
+    expect(calls.map((c) => c.url)).toEqual(['http://gw/kb/documents', 'http://gw/auth/refresh', 'http://gw/kb/documents'])
+    expect(calls[2]!.init.body).toBe(form)
+  })
+
+  it('fetches binary responses as a Blob and maps errors', async () => {
+    const { fetch } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    const blob = await api.blob('/kb/documents/1/file')
+    expect(await blob.text()).toBe('PDFDATA')
+    await expect(api.blob('/conflict')).rejects.toMatchObject({ status: 409, code: 'slug_taken' })
+  })
+
+  it('sends DELETE and resolves 204 to undefined', async () => {
+    const { fetch, calls } = fakeBackend()
+    const api = createApiClient({ baseUrl: 'http://gw', tokens: memoryStore({ accessToken: 'new-access', refreshToken: 'r1' }), fetch })
+    expect(await api.del('/empty')).toBeUndefined()
+    expect(calls[0]!.init.method).toBe('DELETE')
   })
 })
