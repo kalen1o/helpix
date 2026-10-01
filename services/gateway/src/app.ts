@@ -17,6 +17,14 @@ export interface GatewayDeps {
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 
+/** KB uploads (a file up to 10 MB, or pasted text) are the only requests allowed past the default body limit. */
+function isKbUpload(req: FastifyRequest): boolean {
+  if (req.method !== 'POST') return false
+  const q = req.url.indexOf('?')
+  const pathname = q === -1 ? req.url : req.url.slice(0, q)
+  return pathname === '/kb/documents' || pathname === '/kb/documents/text'
+}
+
 export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> {
   const { config } = deps
   const tenantAuth = deps.tenantAuth ?? createTenantAuthClient(config.tenantAuthUrl, config.internalToken)
@@ -29,7 +37,7 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
   app.addContentTypeParser('*', (_req, payload, done) => done(null, payload))
 
   registerErrorHandler(app)
-  app.addHook('onRequest', enforceBodyLimit(config.bodyLimitBytes))
+  app.addHook('onRequest', enforceBodyLimit((req) => (isKbUpload(req) ? config.kbUploadLimitBytes : config.bodyLimitBytes)))
   app.addHook('onSend', async (req, reply) => {
     reply.header(HEADERS.requestId, req.id)
   })
@@ -71,15 +79,19 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
       }),
   })
 
-  for (const [url, routePrefix] of [['/me', '/me'], ['/admin/*', '/admin']] as const) {
+  for (const [url, routePrefix, target] of [
+    ['/me', '/me', config.tenantAuthUrl],
+    ['/admin/*', '/admin', config.tenantAuthUrl],
+    ['/kb/*', '/kb', config.kbServiceUrl],
+  ] as const) {
     app.route({
       method: [...METHODS],
       url,
       handler: async (req, reply) => {
-        // Validate the path before resolving the bearer token so a traversal attempt never reaches tenant-auth.
+        // Validate the path before resolving the bearer token so a traversal attempt never reaches a backend.
         const path = canonicalPath(req.url, routePrefix)
         return forward(req, reply, {
-          target: config.tenantAuthUrl,
+          target,
           internalToken: config.internalToken,
           routePrefix,
           path,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadConfig } from '../src/config'
 
-const ENV = { INTERNAL_TOKEN: 'i'.repeat(32), TENANT_AUTH_URL: 'http://tenant-auth:4001' }
+const ENV = { INTERNAL_TOKEN: 'i'.repeat(32), TENANT_AUTH_URL: 'http://tenant-auth:4001', KB_SERVICE_URL: 'http://kb-service:4002' }
 
 describe('loadConfig', () => {
   it('accepts a 32-character internal token', () => {
@@ -14,5 +14,17 @@ describe('loadConfig', () => {
 
   it('rejects a missing internal token', () => {
     expect(() => loadConfig({ ...ENV, INTERNAL_TOKEN: undefined })).toThrow('Missing required env var INTERNAL_TOKEN')
+  })
+
+  it('requires KB_SERVICE_URL and defaults the upload limit to 11 MiB', () => {
+    expect(() => loadConfig({ ...ENV, KB_SERVICE_URL: undefined })).toThrow('Missing required env var KB_SERVICE_URL')
+    expect(loadConfig(ENV).kbUploadLimitBytes).toBe(11 * 1024 * 1024)
+  })
+
+  it.each(['BODY_LIMIT_BYTES', 'KB_UPLOAD_LIMIT_BYTES', 'RESOLVE_CACHE_TTL_MS'])('rejects a non-numeric or non-positive %s', (key) => {
+    for (const bad of ['abc', '0', '-5', '1.5']) {
+      expect(() => loadConfig({ ...ENV, [key]: bad })).toThrow(`${key} must be a positive integer`)
+    }
+    expect(loadConfig({ ...ENV, [key]: '2048' })).toBeDefined()
   })
 })

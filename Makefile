@@ -13,12 +13,13 @@ help: ## Show this help
 setup: .env ## Install dependencies and create .env if missing
 	npm install
 
-start: up dashboard ## Docker stack (postgres, tenant-auth, gateway :4000) + dashboard dev server :5173
+start: up dashboard ## Docker stack (postgres, tenant-auth, kb-service, gateway :4000) + dashboard dev server :5173
 
-dev: .env db ## Hot reload: postgres in Docker; tenant-auth, gateway and dashboard run locally (Ctrl-C stops all)
-	docker compose stop gateway tenant-auth
+dev: .env db ## Hot reload: postgres in Docker; tenant-auth, kb-service, gateway and dashboard run locally (Ctrl-C stops all)
+	docker compose stop gateway tenant-auth kb-service
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
 	PORT=4001 npm run dev -w services/tenant-auth & \
+	PORT=4002 npm run dev -w services/kb-service & \
 	PORT=4000 npm run dev -w services/gateway & \
 	npm run dev -w apps/admin-dashboard & \
 	wait
@@ -47,7 +48,7 @@ db: ## Start only Postgres (host port 5433)
 
 reset-db: .env ## Delete ALL data, recreate the databases and reseed the super-admin from .env (asks first; FORCE=1 skips)
 	@if [ "$(FORCE)" != "1" ]; then \
-	  read -r -p "This permanently deletes all Helpix data (tenants, admins, test DB). Type 'yes' to continue: " ans; \
+	  read -r -p "This permanently deletes all Helpix data (tenants, admins, KB documents and files, test DB). Type 'yes' to continue: " ans; \
 	  [ "$$ans" = "yes" ] || { echo "Aborted."; exit 1; }; \
 	fi
 	docker compose down -v

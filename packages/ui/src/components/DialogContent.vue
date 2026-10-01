@@ -7,7 +7,7 @@ import { DIALOG_OPEN } from './dialogContext'
 // Matches the exit transition in globals.css (.hx-dialog), so content stays visible while it fades out.
 const EXIT_MS = 150
 
-const props = defineProps<{ class?: ClassValue }>()
+const props = defineProps<{ class?: ClassValue; dialogClass?: ClassValue }>()
 const open = inject(DIALOG_OPEN)
 if (!open) throw new Error('DialogContent must be used inside Dialog')
 
@@ -60,7 +60,10 @@ function onClick(event: MouseEvent) {
 <template>
   <dialog
     ref="el"
-    class="hx-dialog m-auto w-full outline-none max-w-lg rounded-xl border bg-card p-0 text-card-foreground shadow-[0_24px_48px_-12px_rgb(16_26_24/0.28)]"
+    :class="cn(
+      'hx-dialog m-auto w-full outline-none max-w-lg rounded-xl border bg-card p-0 text-card-foreground shadow-[0_24px_48px_-12px_rgb(16_26_24/0.28)]',
+      props.dialogClass,
+    )"
     @close="onClose"
     @pointerdown="onPointerDown"
     @click="onClick"

@@ -38,12 +38,14 @@ export function createApiClient(opts: ApiClientOptions) {
 
   function send(method: Method, path: string, body: unknown, accessToken?: string): Promise<Response> {
     const headers: Record<string, string> = {}
-    if (body !== undefined) headers['content-type'] = 'application/json'
+    // For FormData, fetch sets multipart/form-data with the boundary itself.
+    const form = body instanceof FormData
+    if (body !== undefined && !form) headers['content-type'] = 'application/json'
     if (accessToken) headers.authorization = `Bearer ${accessToken}`
     return doFetch(`${opts.baseUrl}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     })
   }
 
@@ -77,7 +79,8 @@ export function createApiClient(opts: ApiClientOptions) {
     refreshing = null
   }
 
-  async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  /** Sends with the current token, refreshing once on 401. Throws ApiError for any non-2xx response. */
+  async function fetchOk(method: Method, path: string, body?: unknown): Promise<Response> {
     let res = await send(method, path, body, opts.tokens.get()?.accessToken)
     if (res.status === 401 && opts.tokens.get()) {
       if (await refreshOnce()) res = await send(method, path, body, opts.tokens.get()?.accessToken)
@@ -86,6 +89,11 @@ export function createApiClient(opts: ApiClientOptions) {
       const err = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string; requestId?: string } } | null
       throw new ApiError(res.status, err?.error?.code ?? 'http_error', err?.error?.message ?? res.statusText, err?.error?.requestId)
     }
+    return res
+  }
+
+  async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+    const res = await fetchOk(method, path, body)
     if (res.status === 204) return undefined as T
     return (await res.json()) as T
   }
@@ -96,6 +104,11 @@ export function createApiClient(opts: ApiClientOptions) {
     get: <T>(path: string) => request<T>('GET', path),
     post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
     patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+    del: (path: string) => request<void>('DELETE', path),
+    /** Posts multipart form data, e.g. a file upload. */
+    upload: <T>(path: string, form: FormData) => request<T>('POST', path, form),
+    /** Fetches a binary response, e.g. a stored file to preview or download. */
+    blob: async (path: string): Promise<Blob> => (await fetchOk('GET', path)).blob(),
   }
 }
 
