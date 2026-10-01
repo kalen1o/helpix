@@ -7,9 +7,14 @@ export interface Product {
   colors: { name: string; body: string; accent: string }[]
   storage: { gb: number; priceCents: number }[]
   kind: 'phone' | 'accessory'
+  /** Rear camera count, drawn by PhoneArt. */
+  cameras?: 2 | 3
+  /** Stock photo in public/products (credits in CREDITS.md). Products without one fall back to PhoneArt. */
+  photo?: { src: string; alt: string; /** CSS object-position, so narrow crops keep the cameras in frame. */ focus?: string }
 }
 
-// A fictional brand for the Helpix demo. No real company's names, marks or photos.
+// A fictional brand for the Helpix demo. No real company's names, marks or photos; the stock photos show
+// unbranded phones, and each product's first colour is the finish its photo shows.
 export const PRODUCTS: Product[] = [
   {
     id: 'orchard-one-pro',
@@ -17,12 +22,14 @@ export const PRODUCTS: Product[] = [
     tagline: 'Titanium frame. Triple camera. All-day battery.',
     description: 'Our most capable phone: a 6.3-inch display, a 48 MP triple camera and a frame that shrugs off drops.',
     colors: [
-      { name: 'Graphite', body: '#2B2D31', accent: '#55595F' },
       { name: 'Glacier', body: '#C9D3DA', accent: '#EEF2F5' },
+      { name: 'Graphite', body: '#2B2D31', accent: '#55595F' },
       { name: 'Desert', body: '#B49A82', accent: '#D8C4AF' },
     ],
     storage: [{ gb: 256, priceCents: 109900 }, { gb: 512, priceCents: 129900 }, { gb: 1024, priceCents: 149900 }],
     kind: 'phone',
+    photo: { src: '/products/one-pro.webp', alt: 'Close-up of a silver phone’s triple camera', focus: '28% 50%' },
+    cameras: 3,
   },
   {
     id: 'orchard-one',
@@ -36,6 +43,8 @@ export const PRODUCTS: Product[] = [
     ],
     storage: [{ gb: 128, priceCents: 79900 }, { gb: 256, priceCents: 89900 }],
     kind: 'phone',
+    photo: { src: '/products/one.webp', alt: 'A black phone’s dual camera in low light' },
+    cameras: 2,
   },
   {
     id: 'orchard-mini',
@@ -43,11 +52,13 @@ export const PRODUCTS: Product[] = [
     tagline: 'Pocket-sized. Full-sized power.',
     description: 'A 5.4-inch phone that fits one hand, with the One’s camera and chip.',
     colors: [
-      { name: 'Starlight', body: '#E6DFD3', accent: '#F7F3EC' },
       { name: 'Ink', body: '#202124', accent: '#3C3D41' },
+      { name: 'Starlight', body: '#E6DFD3', accent: '#F7F3EC' },
     ],
     storage: [{ gb: 128, priceCents: 59900 }, { gb: 256, priceCents: 69900 }],
     kind: 'phone',
+    photo: { src: '/products/mini.webp', alt: 'A black phone lying on a dark wooden table' },
+    cameras: 2,
   },
   {
     id: 'orchard-buds',
@@ -57,6 +68,7 @@ export const PRODUCTS: Product[] = [
     colors: [{ name: 'Snow', body: '#F2F2F2', accent: '#FFFFFF' }],
     storage: [{ gb: 0, priceCents: 17900 }],
     kind: 'accessory',
+    photo: { src: '/products/buds.webp', alt: 'A pair of black earbuds on a dark surface' },
   },
 ]
 
@@ -64,3 +76,5 @@ export const productById = (id: string): Product | undefined => PRODUCTS.find((p
 
 export const formatPrice = (cents: number): string =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
+
+export const formatCapacity = (gb: number): string => (gb >= 1024 ? `${gb / 1024} TB` : `${gb} GB`)

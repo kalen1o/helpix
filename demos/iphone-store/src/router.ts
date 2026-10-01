@@ -10,5 +10,6 @@ export const router = createRouter({
     { path: '/product/:id', component: ProductPage, props: true },
     { path: '/bag', component: BagPage },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  // `/#lineup` lands on the section (it carries scroll-margin for the floating nav); every other route starts at the top.
+  scrollBehavior: (to) => (to.hash ? { el: to.hash } : { top: 0 }),
 })

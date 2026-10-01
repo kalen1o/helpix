@@ -1,22 +1,33 @@
 <script setup lang="ts">
-defineProps<{ body: string; accent: string; kind: 'phone' | 'accessory'; size?: 'sm' | 'lg' }>()
+import { computed } from 'vue'
+
+const props = withDefaults(
+  defineProps<{ body: string; accent: string; kind: 'phone' | 'accessory'; cameras?: 2 | 3; size?: 'xs' | 'sm' | 'md' | 'lg' }>(),
+  { cameras: 2, size: 'md' },
+)
+
+// The art is drawn in em (styles.css `.phone`, `.bud`), so one font-size scales the whole object.
+const SCALE = { xs: '0.24rem', sm: '0.8rem', md: '1rem', lg: 'clamp(0.95rem, 1.6vw + 0.3rem, 1.4rem)' }
+const style = computed(() => ({ '--art-body': props.body, '--art-accent': props.accent, fontSize: SCALE[props.size] }))
 </script>
 
 <template>
-  <!-- CSS-only product art: a rounded slab with a camera island, or a pair of earbuds. -->
-  <div class="grid place-items-center" :class="size === 'lg' ? 'h-96' : 'h-56'" aria-hidden="true">
-    <div
-      v-if="kind === 'phone'"
-      class="relative rounded-[2.2rem] shadow-2xl ring-1 ring-white/10"
-      :class="size === 'lg' ? 'h-80 w-40' : 'h-44 w-22'"
-      :style="{ background: `linear-gradient(160deg, ${accent}, ${body} 55%)` }"
-    >
-      <div class="absolute left-3 top-3 grid size-[38%] grid-cols-2 gap-1 rounded-2xl bg-black/25 p-1.5">
-        <span v-for="i in 3" :key="i" class="rounded-full bg-black/70 ring-2 ring-white/10" />
+  <!-- CSS-only product art: the back of a phone with its camera plateau, or a pair of earbuds. -->
+  <div class="relative flex items-end justify-center" :style="style" aria-hidden="true">
+    <div v-if="kind === 'phone'" class="phone">
+      <div class="phone__plateau">
+        <span class="phone__lens phone__lens--a" />
+        <span class="phone__lens phone__lens--b" />
+        <span v-if="cameras === 3" class="phone__lens phone__lens--c" />
+        <span class="phone__flash" />
+      </div>
+      <span class="phone__mark" />
+    </div>
+    <div v-else class="flex gap-[1.6em] pb-[5em]">
+      <div v-for="i in 2" :key="i" class="bud" :class="i === 2 && 'scale-x-[-1]'">
+        <span class="bud__head" /><span class="bud__tip" /><span class="bud__stem" />
       </div>
     </div>
-    <div v-else class="flex gap-3">
-      <span v-for="i in 2" :key="i" class="block h-20 w-10 rounded-full shadow-xl ring-1 ring-black/10" :style="{ background: `linear-gradient(180deg, ${accent}, ${body})` }" />
-    </div>
+    <span class="art-floor" />
   </div>
 </template>
