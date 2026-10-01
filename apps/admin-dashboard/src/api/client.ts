@@ -36,7 +36,7 @@ export function createApiClient(opts: ApiClientOptions) {
   // the token store when it completes, or it would undo a logout or clobber a newer session.
   let generation = 0
 
-  function send(method: Method, path: string, body: unknown, accessToken?: string): Promise<Response> {
+  function send(method: Method, path: string, body: unknown, accessToken?: string, signal?: AbortSignal): Promise<Response> {
     const headers: Record<string, string> = {}
     // For FormData, fetch sets multipart/form-data with the boundary itself.
     const form = body instanceof FormData
@@ -46,6 +46,7 @@ export function createApiClient(opts: ApiClientOptions) {
       method,
       headers,
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+      signal,
     })
   }
 
@@ -80,10 +81,10 @@ export function createApiClient(opts: ApiClientOptions) {
   }
 
   /** Sends with the current token, refreshing once on 401. Throws ApiError for any non-2xx response. */
-  async function fetchOk(method: Method, path: string, body?: unknown): Promise<Response> {
-    let res = await send(method, path, body, opts.tokens.get()?.accessToken)
+  async function fetchOk(method: Method, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
+    let res = await send(method, path, body, opts.tokens.get()?.accessToken, signal)
     if (res.status === 401 && opts.tokens.get()) {
-      if (await refreshOnce()) res = await send(method, path, body, opts.tokens.get()?.accessToken)
+      if (await refreshOnce()) res = await send(method, path, body, opts.tokens.get()?.accessToken, signal)
     }
     if (!res.ok) {
       const err = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string; requestId?: string } } | null
@@ -104,11 +105,14 @@ export function createApiClient(opts: ApiClientOptions) {
     get: <T>(path: string) => request<T>('GET', path),
     post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
     patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+    put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
     del: (path: string) => request<void>('DELETE', path),
     /** Posts multipart form data, e.g. a file upload. */
     upload: <T>(path: string, form: FormData) => request<T>('POST', path, form),
     /** Fetches a binary response, e.g. a stored file to preview or download. */
     blob: async (path: string): Promise<Blob> => (await fetchOk('GET', path)).blob(),
+    /** POSTs and resolves with the unread 2xx response, for streamed (SSE) replies. */
+    stream: (path: string, body: unknown, signal?: AbortSignal): Promise<Response> => fetchOk('POST', path, body, signal),
   }
 }
 

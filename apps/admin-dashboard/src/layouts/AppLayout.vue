@@ -6,6 +6,12 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 
+const NAV = [
+  { to: '/kb', label: 'Knowledge base' },
+  { to: '/agent', label: 'Agent' },
+  { to: '/conversations', label: 'Conversations' },
+]
+
 async function logout() {
   await session.logout()
   await router.push('/login')
@@ -22,11 +28,13 @@ async function logout() {
           </RouterLink>
           <nav v-if="session.state.me?.admin.role === 'tenant_admin'" aria-label="Main" class="flex items-center gap-1 text-sm">
             <RouterLink
-              to="/kb"
+              v-for="item in NAV"
+              :key="item.to"
+              :to="item.to"
               class="rounded-md px-3 py-1.5 font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               active-class="bg-secondary text-foreground"
             >
-              Knowledge base
+              {{ item.label }}
             </RouterLink>
           </nav>
         </div>

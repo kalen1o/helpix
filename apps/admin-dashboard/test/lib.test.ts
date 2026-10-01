@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate } from '../src/lib/format'
+import { formatDate, formatDateTime } from '../src/lib/format'
 import { parseOriginsInput } from '../src/lib/origins'
 import { slugify } from '../src/lib/slugify'
 
@@ -37,5 +37,11 @@ describe('parseOriginsInput', () => {
 describe('formatDate', () => {
   it('uses an unambiguous day-month-year with a month name', () => {
     expect(formatDate('2026-09-30T12:00:00.000Z')).toBe('30 Sep 2026')
+  })
+})
+
+describe('formatDateTime', () => {
+  it('adds a 24-hour time to the date', () => {
+    expect(formatDateTime('2026-09-30T12:05:00Z')).toMatch(/^\d{1,2} (Sep|Oct) 2026, \d{2}:\d{2}$/)
   })
 })

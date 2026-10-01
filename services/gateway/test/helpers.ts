@@ -56,12 +56,13 @@ export function rawRequest(
 
 export const TEST_INTERNAL_TOKEN = 'gateway-test-internal-token-0123456789'
 
-export function testConfig(tenantAuthUrl: string, kbServiceUrl: string = tenantAuthUrl): GatewayConfig {
+export function testConfig(tenantAuthUrl: string, kbServiceUrl: string = tenantAuthUrl, chatServiceUrl: string = tenantAuthUrl): GatewayConfig {
   return {
     port: 0,
     internalToken: TEST_INTERNAL_TOKEN,
     tenantAuthUrl,
     kbServiceUrl,
+    chatServiceUrl,
     corsOrigins: ['http://localhost:5173'],
     bodyLimitBytes: 1024,
     kbUploadLimitBytes: 4096,

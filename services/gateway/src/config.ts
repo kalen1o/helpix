@@ -3,6 +3,7 @@ export interface GatewayConfig {
   internalToken: string
   tenantAuthUrl: string
   kbServiceUrl: string
+  chatServiceUrl: string
   corsOrigins: string[]
   bodyLimitBytes: number
   /** Body limit for KB uploads (files and pasted text); everything else uses bodyLimitBytes. */
@@ -30,6 +31,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
     internalToken,
     tenantAuthUrl: required('TENANT_AUTH_URL'),
     kbServiceUrl: required('KB_SERVICE_URL'),
+    chatServiceUrl: required('CHAT_SERVICE_URL'),
     corsOrigins: (env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((s) => s.trim()).filter(Boolean),
     bodyLimitBytes: positiveInt('BODY_LIMIT_BYTES', 1_048_576),
     kbUploadLimitBytes: positiveInt('KB_UPLOAD_LIMIT_BYTES', 11 * 1024 * 1024),

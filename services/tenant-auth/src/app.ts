@@ -4,7 +4,9 @@ import type { Config } from './config'
 import type { RouteDeps } from './deps'
 import { createTokenService } from './lib/tokens'
 import { authRoutes } from './routes/auth'
+import { agentConfigRoutes } from './routes/agentConfig'
 import { internalRoutes } from './routes/internal'
+import { internalChatRoutes } from './routes/internalChat'
 import { meRoutes } from './routes/me'
 import { tenantRoutes } from './routes/tenants'
 
@@ -28,5 +30,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(internalRoutes, deps)
   await app.register(meRoutes, deps)
   await app.register(tenantRoutes, deps)
+  await app.register(agentConfigRoutes, deps)
+  await app.register(internalChatRoutes, deps)
   return app
 }
