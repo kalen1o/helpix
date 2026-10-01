@@ -178,9 +178,9 @@ Spacing follows Tailwind's **4 px scale**. Stick to these steps:
 
 **Page structure** (`apps/admin-dashboard/src/layouts/AppLayout.vue`):
 
-- Sticky header: `h-14 border-b`, translucent `bg-card/85 backdrop-blur`, with the same `max-w-5xl px-4` column as the content so the edges line up.
+- Sticky header: `h-14`, a translucent material (`.hx-material`: card at 78 % with a 16 px blur), with the same `max-w-5xl px-4` column as the content so the edges line up. Its bottom divider appears only once content scrolls underneath it. The shop name sits beside the logo (`/ Shop name`), so pages don't repeat it. Below `md`, the nav moves to its own row that scrolls sideways.
 - Content: `mx-auto max-w-5xl px-4 py-8`.
-- A page is a `grid gap-6` stack: a title row (title + primary action on the right), then panels.
+- A page is a `grid gap-6` stack: a `PageHeader` (title, optional badge, description, actions on the right), then a row of `StatPanel`s where the data supports it, then panels.
 - Panel grids: put related metrics or summaries in a modular grid (`grid gap-4 sm:grid-cols-2 lg:grid-cols-3`), not one long column of full-width cards. Uneven spans (`lg:col-span-2`) are fine when one panel matters more. Grids collapse to one column on mobile.
 - Two-pane tools (agent settings beside the playground): `grid items-start gap-6 lg:grid-cols-2`.
 - Narrow screens (sign-in): `max-w-sm`. Dialogs: `max-w-lg`, with `p-6 gap-4` inside.
@@ -188,7 +188,7 @@ Spacing follows Tailwind's **4 px scale**. Stick to these steps:
 
 ## Components
 
-Reuse `@helpix/ui` first: **Button, Badge, Card (Header/Title/Description/Content/Footer), Table, Dialog, Input, Textarea, Label, EmptyState, CopyButton, HelpixLogo.** New shared primitives go into `packages/ui`, not into the app.
+Reuse `@helpix/ui` first: **Button, Badge, Card (Header/Title/Description/Content/Footer), Table, Dialog, Input, Textarea, Label, EmptyState, CopyButton, HelpixLogo, PageHeader, StatPanel, SegmentedControl, MonoLabel, InsetPanel.** New shared primitives go into `packages/ui`, not into the app.
 
 - **Cards** are `rounded-xl border bg-card shadow-sm`. Elevation is a border first, then a soft shadow.
 - **Nested surfaces:** inside a card, group secondary content (key/value blocks, previews, tool-call details, source lists) in an inset panel: `rounded-lg border bg-muted/50 p-4`. Use one level of nesting. Never put a card inside a card.
@@ -208,17 +208,27 @@ Reuse `@helpix/ui` first: **Button, Badge, Card (Header/Title/Description/Conten
 
 ## Motion
 
-Smooth and restrained. Motion explains a change. It never decorates.
+Smooth and restrained, built on Apple's fluid-interface rules. Motion explains a change. It never decorates.
 
-- **Curves:** `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)` and `--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)` (these override Tailwind's defaults).
-- **Durations:** 150 ms for state changes, 200 ms for entrances, faster for exits. Nothing in the UI runs longer than 300 ms.
-- **Press:** buttons scale with `active:scale-[0.97]` over 150 ms.
-- **Hover lift:** only on clickable cards and panels. Use `transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md`. Static cards don't move.
-- **Staggered entrance:** when a list or panel grid first loads, fade each item in from 4 px below (`opacity` + `translateY`) over 200 ms, staggered 30–40 ms per item, for the first ~8 items only. Don't animate on re-render, filtering or polling updates.
-- **Dialogs:** `.hx-dialog` enters in 200 ms (opacity + scale from 0.96) and exits in 150 ms.
-- **Streaming replies:** text appears as it streams. Don't add typewriter effects on top.
+- **Library:** [`motion-v`](https://motion.dev/docs/vue) (Motion for Vue) for springs, shared-layout transitions and gestures. Plain CSS transitions are still fine for hover and colour. Never use `@keyframes` for anything a person can interrupt.
+- **Springs** (in `packages/ui/src/motion.ts`), named in Apple's terms (Motion's `bounce` ≈ 1 − damping ratio, `visualDuration` ≈ response):
+  - `SPRING`: damping 1.0, response 0.3 s. The default for UI state, with no overshoot.
+  - `SPRING_MOVE`: damping 1.0, response 0.4 s. For repositioning a selection (the nav pill, segmented-control thumbs, the re-index bar).
+  - `SPRING_FLICK`: damping 0.8, response 0.3 s. **Only** after a gesture carried momentum (a flicked sheet snapping home).
+- **Curves** for fixed-duration work: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)` and `--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)` (these override Tailwind's defaults; `EASE_OUT` in JS).
+- **Durations:** 150 ms for state changes, 200 ms for entrances, and faster for exits. Springs have no fixed duration, but they must visually settle within about 400 ms.
+- **Respond on press:** buttons scale with `active:scale-[0.97]`, which shows on pointer-down rather than on click.
+- **Interruptible:** a moving element can always be redirected. Springs start from the on-screen value and keep their velocity. Never block input while a transition runs (route changes cross-fade without waiting for an exit).
+- **Selection moves:** the active nav item and segmented controls (`SegmentedControl`) use a Mint-wash thumb with a shared `layoutId` that slides to the new choice instead of blinking.
+- **Hover lift:** only on clickable cards and panels (`StatPanel` with `as`). Use `transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md`. Static cards don't move.
+- **Staggered entrance:** `v-enter="index"` fades an item in from 4 px below over 200 ms, staggered 35 ms per item for the first 8. It only fires for items that mount within about 1.2 s of a page opening, so polling, filtering, tab switches and "Load more" never animate.
+- **Dialogs:** on `sm` and up, `.hx-dialog` grows in over 200 ms (opacity + scale from 0.96) **out of the control that opened it** and shrinks back into it on close. Below `sm` it is a **bottom sheet**: it rises from the bottom edge, and the same edge is how it leaves.
+- **Bottom sheet gesture** (`useSheetDrag`): it tracks the finger 1:1 after a 10 px threshold. It rubber-bands when pulled up. On release it projects the velocity (deceleration 0.99) and closes if the projected point passes halfway; an upward flick always keeps it. The release velocity is handed to the spring. A moving sheet can be grabbed again. The scrim lightens as the sheet travels. Escape and the Cancel button stay the accessible way out.
+- **Chat:** in the playground, a new bubble grows out of its tight corner (customer from the bottom-right, agent from the bottom-left). Transcripts render still. Text streams as it arrives, with no typewriter effect. The list glides to a new message and follows a streaming reply without smooth-scroll lag.
+- **Errors you can feel:** a rejected sign-in shakes the form once (`shake()`), like a wrong password on a Mac.
 - **Theme switch** is instant (`.hx-theme-switching`).
-- **Reduced motion:** remove all transforms (lift, stagger offset, scale) and keep opacity fades of 150 ms or less.
+- **Reduced motion:** `MotionConfig reduced-motion="user"` at the app root removes transform and layout animation. Stagger offsets, lift, scale and sheet slides fall back to opacity fades of 150 ms or less. Shake is skipped. Dragging still works (it's direct manipulation), but snapping back never overshoots.
+- **Reduced transparency / more contrast:** the translucent header (`.hx-material`) turns solid.
 
 ## Effects
 
@@ -240,4 +250,4 @@ Atmosphere is a supporting layer behind content, never behind data.
 
 ## Notes
 
-The format and the dashboard feel (mono labels, metric emphasis, nested surfaces, modular panels, hover lift, staggered entrances) are adapted from a Neuform "Nexis Compute" design brief. Its palette, fonts, dark-only mode and WebGL effects were deliberately **not** adopted, so helpix keeps its own brand. Stat panels, inset panels, hover lift and staggered entrances are guidance for new and updated screens. They are not all in the dashboard yet.
+The format and the dashboard feel (mono labels, metric emphasis, nested surfaces, modular panels, hover lift, staggered entrances) are adapted from a Neuform "Nexis Compute" design brief. Its palette, fonts, dark-only mode and WebGL effects were deliberately **not** adopted, so helpix keeps its own brand. Since the October 2026 rebuild, every dashboard screen uses stat panels, inset panels, hover lift and staggered entrances. The motion layer follows Apple's *Designing Fluid Interfaces* (springs, interruptibility, velocity handoff, momentum projection, rubber-banding).

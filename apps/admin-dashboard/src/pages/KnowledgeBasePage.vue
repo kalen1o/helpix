@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { KbDocumentView } from '@helpix/shared/api-types'
-import { Badge, Button, Card, CardContent, EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@helpix/ui'
+import { Badge, Button, Card, EmptyState, PageHeader, StatPanel, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, vEnter } from '@helpix/ui'
 import { ApiError } from '@/api/client'
-import { api, session } from '@/auth/session'
+import { api } from '@/auth/session'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import DocumentPreviewDialog from '@/components/kb/DocumentPreviewDialog.vue'
 import ReindexCard from '@/components/kb/ReindexCard.vue'
@@ -20,6 +20,13 @@ const loaded = ref(false)
 const pageError = ref<string | null>(null)
 const rowError = ref<string | null>(null)
 const uploadOpen = ref(false)
+
+const counts = computed(() => {
+  const by = { processing: 0, ready: 0, failed: 0 }
+  for (const d of docs.value) by[d.status]++
+  return by
+})
+const totalBytes = computed(() => docs.value.reduce((sum, d) => sum + d.sizeBytes, 0))
 
 // Kept after the dialog closes so its title does not change while it fades out.
 const toDelete = ref<KbDocumentView | null>(null)
@@ -120,28 +127,32 @@ onMounted(load)
 
 <template>
   <div class="grid gap-6">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <div class="grid gap-1">
-        <p class="text-sm text-muted-foreground">{{ session.state.me?.tenant?.name }}</p>
-        <h1 class="text-2xl font-semibold">Knowledge base</h1>
-        <p class="text-sm text-muted-foreground">Documents the agent answers from. Only your shop can see them.</p>
-      </div>
-      <Button @click="uploadOpen = true">Add document</Button>
-    </div>
+    <PageHeader title="Knowledge base" description="Documents the agent answers from. Only your shop can see them.">
+      <template #actions>
+        <Button @click="uploadOpen = true">Add document</Button>
+      </template>
+    </PageHeader>
 
     <p v-if="pageError" class="text-sm text-destructive" role="alert">{{ pageError }}</p>
     <p v-if="rowError" class="text-sm text-destructive" role="alert">{{ rowError }}</p>
 
-    <Card v-if="loaded && !pageError" class="py-0">
-      <CardContent class="px-0">
-        <EmptyState
-          v-if="docs.length === 0"
-          title="No documents yet"
-          description="Upload your return policy, shipping FAQ or product notes so the agent can answer from them."
-        >
-          <Button @click="uploadOpen = true">Add document</Button>
-        </EmptyState>
-        <Table v-else>
+    <div v-if="loaded && !pageError && docs.length > 0" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatPanel v-enter="0" label="Documents" :value="docs.length" emphasis :caption="`${formatBytes(totalBytes)} in total`" />
+      <StatPanel v-enter="1" label="Ready" :value="counts.ready" caption="the agent can answer from these" />
+      <StatPanel v-enter="2" label="Processing" :value="counts.processing" :caption="counts.processing > 0 ? 'updates on its own' : 'nothing in the queue'" />
+      <StatPanel v-enter="3" label="Failed" :value="counts.failed" :negative="counts.failed > 0" :caption="counts.failed > 0 ? 'retry from the list below' : 'no problems'" />
+    </div>
+
+    <Card v-if="loaded && !pageError" v-enter="4" class="gap-0 overflow-hidden py-0">
+      <EmptyState
+        v-if="docs.length === 0"
+        title="No documents yet"
+        description="Upload your return policy, shipping FAQ or product notes so the agent can answer from them."
+      >
+        <Button @click="uploadOpen = true">Add document</Button>
+      </EmptyState>
+      <div v-else class="relative overflow-x-auto overflow-y-hidden">
+        <Table>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead class="pl-6">Title</TableHead>
@@ -153,17 +164,17 @@ onMounted(load)
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="doc in docs" :key="doc.id">
+            <TableRow v-for="(doc, i) in docs" :key="doc.id" v-enter="i + 5">
               <TableCell class="max-w-72 py-3 pl-6">
                 <p class="truncate font-medium" :title="doc.title">{{ doc.title }}</p>
                 <p v-if="doc.status === 'failed' && doc.error" class="mt-0.5 text-xs text-destructive">{{ doc.error }}</p>
               </TableCell>
-              <TableCell class="text-muted-foreground">{{ typeLabel(doc.mimeType) }}</TableCell>
-              <TableCell class="whitespace-nowrap text-muted-foreground">{{ formatBytes(doc.sizeBytes) }}</TableCell>
+              <TableCell class="whitespace-nowrap text-muted-foreground">{{ typeLabel(doc.mimeType) }}</TableCell>
+              <TableCell class="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">{{ formatBytes(doc.sizeBytes) }}</TableCell>
               <TableCell>
                 <Badge :variant="BADGE[doc.status]" dot>{{ STATUS_LABEL[doc.status] }}</Badge>
               </TableCell>
-              <TableCell class="whitespace-nowrap text-muted-foreground">{{ formatDate(doc.createdAt) }}</TableCell>
+              <TableCell class="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">{{ formatDate(doc.createdAt) }}</TableCell>
               <TableCell class="pr-6">
                 <div class="flex justify-end gap-1">
                   <Button v-if="doc.status === 'failed'" variant="outline" size="sm" @click="retry(doc)">Retry</Button>
@@ -175,7 +186,7 @@ onMounted(load)
             </TableRow>
           </TableBody>
         </Table>
-      </CardContent>
+      </div>
     </Card>
 
     <ReindexCard v-if="loaded && !pageError && docs.length > 0" ref="reindexCard" />

@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { AdminView, TenantView } from '@helpix/shared/api-types'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, CopyButton, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@helpix/ui'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, CopyButton, Input, Label, PageHeader, StatPanel, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea, vEnter } from '@helpix/ui'
 import { ApiError } from '@/api/client'
 import { api } from '@/auth/session'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -116,90 +116,110 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
 <template>
   <p v-if="pageError" class="text-sm text-destructive">{{ pageError }}</p>
   <div v-else-if="tenant" class="grid gap-6">
-    <div class="grid gap-3">
-      <RouterLink
-        to="/tenants"
-        class="inline-flex w-fit items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4"><path d="m15 18-6-6 6-6" /></svg>
-        Tenants
-      </RouterLink>
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="grid gap-1">
-          <h1 class="flex items-center gap-3 text-2xl font-semibold">
-            {{ tenant.name }}
-            <Badge :variant="tenant.status === 'active' ? 'positive' : 'negative'" dot>{{ tenant.status }}</Badge>
-          </h1>
-          <p class="font-mono text-xs text-muted-foreground">{{ tenant.slug }}</p>
-        </div>
+    <PageHeader :title="tenant.name">
+      <template #eyebrow>
+        <RouterLink
+          to="/tenants"
+          class="mb-2 inline-flex w-fit items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4"><path d="m15 18-6-6 6-6" /></svg>
+          Tenants
+        </RouterLink>
+      </template>
+      <template #badge>
+        <Badge :variant="tenant.status === 'active' ? 'positive' : 'negative'" dot>{{ tenant.status }}</Badge>
+      </template>
+      <template #description>
+        <span class="font-mono text-xs">{{ tenant.slug }}</span>
+      </template>
+      <template #actions>
         <!-- The riskiest action stays quiet here; the confirm dialog carries the weight. -->
         <Button :variant="tenant.status === 'active' ? 'destructive-outline' : 'default'" @click="statusDialogOpen = true">
           {{ tenant.status === 'active' ? 'Suspend' : 'Reactivate' }}
         </Button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      <StatPanel
+        v-enter="0"
+        label="Status"
+        :value="tenant.status === 'active' ? 'Active' : 'Suspended'"
+        :negative="tenant.status !== 'active'"
+        :caption="tenant.status === 'active' ? 'widget and admin logins work' : 'widget off, admins blocked, no data deleted'"
+      />
+      <StatPanel v-enter="1" label="Admins" :value="admins.length" :caption="admins.length === 0 ? 'nobody can sign in yet' : 'can sign in to this shop'" />
+      <StatPanel
+        v-enter="2"
+        label="Allowed sites"
+        :value="tenant.allowedOrigins.length"
+        :caption="tenant.allowedOrigins.length === 0 ? 'the widget runs nowhere yet' : 'where the widget may run'"
+      />
     </div>
 
-    <Card>
+    <Card v-enter="3">
       <CardHeader>
         <CardTitle>Widget key</CardTitle>
         <CardDescription>The shop puts this key in its widget script tag. It is public.</CardDescription>
       </CardHeader>
       <CardContent class="flex flex-wrap items-center gap-2">
-        <code class="inline-flex h-8 select-all items-center rounded-md border bg-muted px-3 font-mono text-xs">{{ tenant.widgetKey }}</code>
+        <code class="inline-flex h-8 min-w-0 max-w-full select-all items-center truncate rounded-md border bg-muted px-3 font-mono text-xs">{{ tenant.widgetKey }}</code>
         <CopyButton :value="tenant.widgetKey" />
         <Button variant="outline" size="sm" @click="rotateDialogOpen = true">Rotate</Button>
       </CardContent>
     </Card>
 
-    <Card>
-      <CardHeader>
-        <CardTitle>Allowed sites</CardTitle>
-        <CardDescription>Origins where the widget may run, one per line, e.g. https://shop.example</CardDescription>
-      </CardHeader>
-      <CardContent class="grid gap-3">
-        <Textarea v-model="originsText" rows="4" class="font-mono text-xs" placeholder="https://shop.example&#10;http://localhost:5174" @input="originsSaved = false" />
-        <div class="flex items-center gap-3">
-          <Button size="sm" :disabled="!originsDirty || savingOrigins" @click="saveOrigins">Save</Button>
-          <Transition
-            enter-active-class="transition-opacity duration-150 ease-out"
-            leave-active-class="transition-opacity duration-300 ease-out"
-            enter-from-class="opacity-0"
-            leave-to-class="opacity-0"
-          >
-            <span v-if="originsSaved" class="text-sm text-muted-foreground">Saved</span>
-          </Transition>
-          <span v-if="originsError" class="text-sm text-destructive" role="alert">{{ originsError }}</span>
-        </div>
-      </CardContent>
-    </Card>
+    <div class="grid items-start gap-6 lg:grid-cols-2">
+      <Card v-enter="4">
+        <CardHeader>
+          <CardTitle>Allowed sites</CardTitle>
+          <CardDescription>Origins where the widget may run, one per line, e.g. https://shop.example</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-3">
+          <Textarea v-model="originsText" rows="5" class="font-mono text-xs" placeholder="https://shop.example&#10;http://localhost:5174" @input="originsSaved = false" />
+          <div class="flex flex-wrap items-center gap-3">
+            <Button size="sm" variant="secondary" :disabled="!originsDirty || savingOrigins" @click="saveOrigins">Save</Button>
+            <Transition
+              enter-active-class="transition-opacity duration-150 ease-out"
+              leave-active-class="transition-opacity duration-300 ease-out"
+              enter-from-class="opacity-0"
+              leave-to-class="opacity-0"
+            >
+              <span v-if="originsSaved" class="text-sm text-muted-foreground" role="status">Saved</span>
+            </Transition>
+            <span v-if="originsError" class="text-sm text-destructive" role="alert">{{ originsError }}</span>
+          </div>
+        </CardContent>
+      </Card>
 
-    <Card>
-      <CardHeader>
-        <CardTitle>Admins</CardTitle>
-        <CardDescription>People who manage this shop's knowledge base and agent.</CardDescription>
-      </CardHeader>
-      <CardContent class="grid gap-6">
-        <Table v-if="admins.length > 0">
-          <TableHeader>
-            <TableRow class="hover:bg-transparent">
-              <TableHead>Email</TableHead>
-              <TableHead>Added</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="a in admins" :key="a.id">
-              <TableCell class="py-3">{{ a.email }}</TableCell>
-              <TableCell class="text-muted-foreground">{{ formatDate(a.createdAt) }}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-        <p v-else class="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          No admins yet. Add one below so the shop can sign in.
-        </p>
+      <Card v-enter="5">
+        <CardHeader>
+          <CardTitle>Admins</CardTitle>
+          <CardDescription>People who manage this shop's knowledge base and agent.</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-5">
+          <div v-if="admins.length > 0" class="relative overflow-x-auto overflow-y-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow class="hover:bg-transparent">
+                  <TableHead>Email</TableHead>
+                  <TableHead>Added</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="a in admins" :key="a.id">
+                  <TableCell class="py-3 [overflow-wrap:anywhere]">{{ a.email }}</TableCell>
+                  <TableCell class="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">{{ formatDate(a.createdAt) }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+          <p v-else class="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+            No admins yet. Add one below so the shop can sign in.
+          </p>
 
-        <div class="grid gap-3 border-t pt-5">
-          <h3 class="text-sm font-medium">Add an admin</h3>
-          <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" @submit.prevent="createAdmin">
+          <form class="grid gap-3 rounded-lg border bg-muted/50 p-4" @submit.prevent="createAdmin">
+            <h3 class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Add an admin</h3>
             <div class="grid gap-2">
               <Label for="admin-email">Email</Label>
               <Input id="admin-email" v-model="newAdminEmail" type="email" placeholder="owner@shop.com" required />
@@ -208,12 +228,12 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
               <Label for="admin-password">Temporary password</Label>
               <Input id="admin-password" v-model="newAdminPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" required />
             </div>
-            <Button type="submit">Add admin</Button>
+            <p v-if="adminError" class="text-sm text-destructive" role="alert">{{ adminError }}</p>
+            <Button type="submit" variant="secondary" class="justify-self-end">Add admin</Button>
           </form>
-          <p v-if="adminError" class="text-sm text-destructive" role="alert">{{ adminError }}</p>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
 
     <ConfirmDialog
       v-model:open="statusDialogOpen"
