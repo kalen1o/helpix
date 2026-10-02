@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { createFakeChat } from '@helpix/llm'
 import { createPool, DEFAULT_AGENT_CONFIG, HEADERS, migrate, readSseEvents, type Db } from '@helpix/shared'
 import type { AgentConfig, KbSearchResult, PublishedAgentConfig } from '@helpix/shared/api-types'
+import type { Order, OrderLookupResult } from '@helpix/shared/orders'
 import { TEST_DATABASE_URL } from '@helpix/shared/testing'
 import { buildApp } from '../src/app'
 import { createConversation, type ConversationRow } from '../src/repos/conversations'
@@ -11,6 +12,7 @@ import type { ChatServiceConfig } from '../src/config'
 import type { ChatDeps } from '../src/deps'
 import type { AgentConfigSource } from '../src/clients/agentConfig'
 import { KbUnavailableError, type KbClient } from '../src/clients/kb'
+import type { OrdersClient } from '../src/clients/orders'
 
 export const TENANT_A = '00000000-0000-4000-8000-00000000000a'
 export const TENANT_B = '00000000-0000-4000-8000-00000000000b'
@@ -56,10 +58,53 @@ export function fakeKb(byTenant: Record<string, KbSearchResult[]> = {}, opts: { 
   return kb
 }
 
-export function fakeConfigs(config: Partial<AgentConfig> = {}, tenantName = 'Test Shop'): AgentConfigSource {
+export function fakeConfigs(config: Partial<AgentConfig> = {}, tenantName = 'Test Shop', orderLookup = false): AgentConfigSource {
   return {
-    getPublished: async (): Promise<PublishedAgentConfig> => ({ tenantName, config: { ...DEFAULT_AGENT_CONFIG, ...config } }),
+    getPublished: async (): Promise<PublishedAgentConfig> => ({ tenantName, config: { ...DEFAULT_AGENT_CONFIG, ...config }, orderLookup }),
   }
+}
+
+/** Orders as the shop's order API returns them (after tenant-auth validated them). */
+export const ORDER: Order = {
+  orderId: '1001',
+  status: 'shipped',
+  placedAt: '2026-09-20T10:00:00.000Z',
+  updatedAt: '2026-09-22T08:00:00.000Z',
+  items: [{ name: 'iPhone 16', quantity: 1, variant: 'Black, 128 GB' }],
+  tracking: { carrier: 'DHL', number: 'JD014600003', url: 'https://track.example/JD014600003' },
+}
+export const ORDER_2: Order = {
+  orderId: '1002',
+  status: 'processing',
+  placedAt: '2026-09-28T09:30:00.000Z',
+  updatedAt: '2026-09-28T09:30:00.000Z',
+  items: [{ name: 'MagSafe Charger', quantity: 2 }],
+}
+
+export interface OrdersCall {
+  kind: 'get' | 'list'
+  tenantId: string
+  customerId: string
+  orderId: string | null
+}
+
+/** A tenant-auth orders stand-in: answers `reply` (or what it returns for the call) and records every call. */
+export function fakeOrders(reply: OrderLookupResult | ((call: OrdersCall) => OrderLookupResult) = { status: 'not_found' }) {
+  const calls: OrdersCall[] = []
+  const answer = (call: OrdersCall): OrderLookupResult => {
+    calls.push(call)
+    return typeof reply === 'function' ? reply(call) : reply
+  }
+  const orders: OrdersClient & { calls: OrdersCall[] } = {
+    calls,
+    async get(tenantId, customerId, orderId) {
+      return answer({ kind: 'get', tenantId, customerId, orderId })
+    },
+    async list(tenantId, customerId) {
+      return answer({ kind: 'list', tenantId, customerId, orderId: null })
+    },
+  }
+  return orders
 }
 
 export function makeDeps(db: Db, overrides: Partial<ChatDeps> = {}): ChatDeps {
@@ -69,6 +114,7 @@ export function makeDeps(db: Db, overrides: Partial<ChatDeps> = {}): ChatDeps {
     chat: createFakeChat('fake'),
     kb: fakeKb(),
     agentConfigs: fakeConfigs(),
+    orders: fakeOrders(),
     ...overrides,
   }
 }

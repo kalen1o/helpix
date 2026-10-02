@@ -1,12 +1,18 @@
 // Provisions every demo shop (demos/*/seed/shop.json) through the gateway: tenant, admin, allowed origin, KB documents,
-// published agent config, and the widget key written to the demo's .env.development.local. Safe to run repeatedly.
-// Run with the stack up: `make seed-demos`.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+// published agent config, and the widget key written to the demo's .env.development.local. Shops with their own
+// backend (demos/<shop>/server/main.ts) also get shopper sign-in and order lookup: an RSA key pair, order API key and
+// session secret in demos/<shop>/.data/ (kept when present), the public key and order API saved on the tenant, and a
+// passing "test connection". Safe to run repeatedly.
+// Run with the stack and the demo backend up: `make seed-demos`.
+import { createPublicKey, generateKeyPairSync, randomBytes } from 'node:crypto'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 
 const BASE = process.env.GATEWAY_URL ?? 'http://localhost:4000'
 const SUPER_EMAIL = process.env.SEED_SUPERADMIN_EMAIL ?? 'admin@helpix.local'
 const SUPER_PASSWORD = process.env.SEED_SUPERADMIN_PASSWORD ?? 'change-me-please'
+// Where tenant-auth reaches the demo backend. The Makefile picks host.docker.internal when tenant-auth runs in Docker.
+const ORDER_API_URL = (process.env.DEMO_ORDER_API_URL ?? 'http://localhost:4101').replace(/\/+$/, '')
 const READY_TIMEOUT_MS = 120_000
 
 function fail(message, detail) {
@@ -50,11 +56,49 @@ async function login(email, password) {
 const titleOf = (markdown, file) => /^#\s+(.+)$/m.exec(markdown)?.[1]?.trim() ?? basename(file, '.md')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** Creates the shop's secrets in `.data/` when missing; existing files are kept so sessions and keys survive re-seeding. */
+function ensureShopSecrets(dataDir) {
+  mkdirSync(dataDir, { recursive: true })
+  const privatePath = join(dataDir, 'shop-key.pem')
+  const publicPath = join(dataDir, 'shop-key.pub.pem')
+  if (existsSync(privatePath) && !existsSync(publicPath)) {
+    writeFileSync(publicPath, createPublicKey(readFileSync(privatePath)).export({ type: 'spki', format: 'pem' }))
+    console.log('  derived the shop public key from the existing private key')
+  } else if (!existsSync(privatePath) || !existsSync(publicPath)) {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    })
+    writeFileSync(privatePath, privateKey, { mode: 0o600 })
+    writeFileSync(publicPath, publicKey)
+    console.log('  generated the shop sign-in key pair')
+  }
+  for (const file of ['order-api-key', 'session-secret']) {
+    const path = join(dataDir, file)
+    if (!existsSync(path)) {
+      writeFileSync(path, `${randomBytes(32).toString('base64url')}\n`, { mode: 0o600 })
+      console.log(`  generated ${file}`)
+    }
+  }
+  return {
+    publicKeyPem: readFileSync(publicPath, 'utf8'),
+    orderApiKey: readFileSync(join(dataDir, 'order-api-key'), 'utf8').trim(),
+  }
+}
+
+const backendHint = (dir) =>
+  `Is the demo backend running? Start it with make demo (make start and make dev also run it): ` +
+  `curl -s localhost:4101/orders should answer 401. tenant-auth calls it at ${ORDER_API_URL}; ` +
+  `a local URL also needs ORDER_API_ALLOW_PRIVATE_HOSTS=true in .env (restart tenant-auth after changing it). ` +
+  `Backend files: demos/${dir}/server.`
+
 const root = await login(SUPER_EMAIL, SUPER_PASSWORD)
 if (!root) fail('super-admin login failed. Check SEED_SUPERADMIN_EMAIL/PASSWORD in .env.')
 
 const shops = readdirSync('demos').filter((d) => existsSync(join('demos', d, 'seed', 'shop.json')))
 const summary = []
+const shoppers = []
 
 for (const dir of shops) {
   const seed = join('demos', dir, 'seed')
@@ -121,8 +165,38 @@ for (const dir of shops) {
     join('demos', dir, '.env.development.local'),
     `# Written by make seed-demos. Restart the demo dev server after it changes.\nVITE_HELPIX_GATEWAY=${BASE}\nVITE_HELPIX_WIDGET_KEY=${tenant.widgetKey}\n`,
   )
+
+  if (existsSync(join('demos', dir, 'server', 'main.ts'))) {
+    const dataDir = join('demos', dir, '.data')
+    const { publicKeyPem, orderApiKey } = ensureShopSecrets(dataDir)
+    // The backend reads this for the token's `aud`, on every request, so no restart is needed.
+    writeFileSync(join(dataDir, 'widget-key'), `${tenant.widgetKey}\n`)
+
+    await must('upload shop key', call('PUT', '/integrations/shop-key', { token, body: { publicKeyPem } }), 200)
+    console.log('  shop sign-in key uploaded')
+
+    const saved = await call('PUT', '/integrations/order-api', { token, body: { baseUrl: ORDER_API_URL, apiKey: orderApiKey } })
+    if (saved.status !== 200) {
+      const hint = saved.json?.error?.code === 'invalid_base_url' ? ' Set ORDER_API_ALLOW_PRIVATE_HOSTS=true in .env and restart tenant-auth.' : ''
+      fail(`saving the order API ${ORDER_API_URL} failed (${saved.status}).${hint}`, saved.json)
+    }
+    console.log(`  order API ${ORDER_API_URL}`)
+
+    const customers = JSON.parse(readFileSync(join(seed, 'customers.json'), 'utf8'))
+    const tester = customers[0].id
+    const test = await must('test the order API', call('POST', '/integrations/order-api/test', { token, body: { customerId: tester } }), 200)
+    if (!test.ok) fail(`the order API test for ${tester} did not pass: ${test.status}, ${test.message}\n  ${backendHint(dir)}`)
+    console.log(`  order API test passed (${tester})`)
+
+    for (const c of customers) shoppers.push({ shop: shop.name, email: c.email, password: c.password, customerId: c.id })
+  }
+
   summary.push({ shop: shop.name, url: shop.origin, admin: shop.adminEmail, password: shop.adminPassword })
 }
 
 console.log('\nDemo shops ready:')
 console.table(summary)
+if (shoppers.length) {
+  console.log('\nDemo shoppers (sign in on the store):')
+  console.table(shoppers)
+}

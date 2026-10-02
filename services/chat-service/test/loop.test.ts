@@ -1,4 +1,4 @@
-import { ChatError, createScriptedChat, type ChatEvent, type ChatMessage } from '@helpix/llm'
+import { ChatError, createScriptedChat, type ChatEvent, type ChatMessage, type ToolCall } from '@helpix/llm'
 import type { ToolActivity } from '@helpix/shared/api-types'
 import { describe, expect, it } from 'vitest'
 import { EMPTY_REPLY, runAgent } from '../src/agent/loop'
@@ -22,7 +22,12 @@ function echoTool(): AgentTool & { args: string[] } {
   }
 }
 
-function run(chat: ReturnType<typeof createScriptedChat>, tools: AgentTool[] = [echoTool()], maxToolRounds = 3) {
+function run(
+  chat: ReturnType<typeof createScriptedChat>,
+  tools: AgentTool[] = [echoTool()],
+  maxToolRounds = 3,
+  prefetch?: ToolCall,
+) {
   const deltas: string[] = []
   const toolEvents: ToolActivity[] = []
   const result = runAgent({
@@ -31,6 +36,7 @@ function run(chat: ReturnType<typeof createScriptedChat>, tools: AgentTool[] = [
     messages: MESSAGES,
     tools,
     maxToolRounds,
+    prefetch,
     signal: new AbortController().signal,
     onText: (t) => deltas.push(t),
     onTool: (a) => toolEvents.push(a),
@@ -99,5 +105,43 @@ describe('runAgent', () => {
     const { result, deltas } = run(chat)
     await expect(result).rejects.toBeInstanceOf(ChatError)
     expect(deltas).toEqual(['Partial'])
+  })
+
+  describe('prefetch', () => {
+    const PREFETCH: ToolCall = { id: 'prefetch_0', name: 'search_kb', arguments: '{"query":"Refunds?"}' }
+
+    it('runs the tool before the first round and hands the model the call and its result', async () => {
+      const chat = createScriptedChat([[text('Within 30 days.'), done()]])
+      const tool = echoTool()
+      const { result, toolEvents } = run(chat, [tool], 3, PREFETCH)
+      const out = await result
+      expect(out.text).toBe('Within 30 days.')
+      expect(tool.args).toEqual(['{"query":"Refunds?"}'])
+      expect(toolEvents).toHaveLength(1)
+      expect(out.tools).toEqual(toolEvents)
+      expect(chat.requests[0]!.messages.slice(2)).toEqual([
+        { role: 'assistant', content: '', toolCalls: [PREFETCH] },
+        { role: 'tool', toolCallId: 'prefetch_0', content: 'result for {"query":"Refunds?"}' },
+      ])
+      // The model can still search again with its own query.
+      expect(chat.requests[0]!.tools?.map((t) => t.name)).toEqual(['search_kb'])
+    })
+
+    it('does not count against the tool-round cap', async () => {
+      const chat = createScriptedChat([[call('c1'), done('tool_calls')], [text('Done.'), done()]])
+      const tool = echoTool()
+      const { result } = run(chat, [tool], 1, PREFETCH)
+      expect((await result).text).toBe('Done.')
+      expect(tool.args).toEqual(['{"query":"Refunds?"}', '{"query":"q"}'])
+      expect(chat.requests[1]!.tools).toBeUndefined()
+    })
+
+    it('ignores a prefetch for a tool that is not offered', async () => {
+      const chat = createScriptedChat([[text('Hi.'), done()]])
+      const { result, toolEvents } = run(chat, [echoTool()], 3, { ...PREFETCH, name: 'lookup_order' })
+      expect((await result).text).toBe('Hi.')
+      expect(toolEvents).toEqual([])
+      expect(chat.requests[0]!.messages).toEqual(MESSAGES)
+    })
   })
 })

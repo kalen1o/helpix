@@ -4,10 +4,11 @@ import type { WidgetConfig } from '@helpix/shared/api-types'
 import type { WidgetApi } from './api'
 import ChatPanel from './components/ChatPanel.vue'
 import Launcher from './components/Launcher.vue'
+import type { Identity } from './identity'
 import { useChat } from './useChat'
 
-const props = defineProps<{ config: WidgetConfig; api: WidgetApi; widgetKey: string; state: { open: boolean } }>()
-const chat = useChat({ api: props.api, widgetKey: props.widgetKey })
+const props = defineProps<{ config: WidgetConfig; api: WidgetApi; widgetKey: string; state: { open: boolean }; identity: Identity }>()
+const chat = useChat({ api: props.api, widgetKey: props.widgetKey, identity: props.identity })
 const launcher = ref<InstanceType<typeof Launcher> | null>(null)
 // Closing hands focus back to the launcher.
 watch(
@@ -34,6 +35,7 @@ watch(
         :config="config"
         :messages="chat.messages.value"
         :busy="chat.busy.value"
+        :signed-in="identity.customerId !== null"
         @send="chat.send"
         @retry="chat.retry"
         @new-chat="chat.newChat"

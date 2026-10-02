@@ -75,6 +75,21 @@
 .btn-line:hover { border-color: var(--color-ink-3); }
 .btn-line:active { transform: scale(0.98); }
 
+/* Text field on the dark stage. */
+.field {
+  width: 100%;
+  border-radius: 1rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  background: var(--color-paper-2);
+  padding: 0.75rem 1rem;
+  color: var(--color-ink);
+  font-weight: 400;
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+.field:hover { border-color: var(--color-ink-3); }
+.field:focus { border-color: var(--color-gold); outline: none; }
+.field[aria-invalid="true"] { border-color: var(--color-alert); }
+
 /* A lit stage: the floor the product art stands on. */
 .stage {
   position: relative;

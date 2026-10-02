@@ -107,4 +107,37 @@ describe('CORS', () => {
     })
     expect(res.headers['access-control-allow-origin']).toBeUndefined()
   })
+
+  it('forwards /integrations and everything under it to tenant-auth with the admin identity', async () => {
+    await gw.close()
+    gw = await buildGateway({ config: testConfig(echo.url, 'http://127.0.0.1:1', 'http://127.0.0.1:1'), tenantAuth })
+    const requests = [
+      ['GET', '/integrations'],
+      ['PUT', '/integrations/order-api'],
+      ['POST', '/integrations/order-api/test'],
+      ['DELETE', '/integrations/shop-key'],
+    ] as const
+    for (const [method, url] of requests) {
+      const hasBody = method === 'PUT' || method === 'POST'
+      const res = await gw.inject({
+        method,
+        url,
+        headers: { authorization: 'Bearer tenant-token', 'x-tenant-id': 'tenant-b', ...(hasBody ? { 'content-type': 'application/json' } : {}) },
+        ...(hasBody ? { payload: '{}' } : {}),
+      })
+      expect(res.statusCode, `${method} ${url}`).toBe(200)
+    }
+    expect(echo.calls.map((c) => `${c.method} ${c.url}`)).toEqual(requests.map(([m, u]) => `${m} ${u}`))
+    for (const c of echo.calls) {
+      expect(c.headers['x-tenant-id']).toBe('tenant-a')
+      expect(c.headers['x-helpix-role']).toBe('tenant_admin')
+      expect(c.headers.authorization).toBeUndefined()
+    }
+  })
+
+  it('rejects /integrations without a bearer token', async () => {
+    const res = await get('/integrations')
+    expect(res.statusCode).toBe(401)
+    expect(echo.calls).toHaveLength(0)
+  })
 })

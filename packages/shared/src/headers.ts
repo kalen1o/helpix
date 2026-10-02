@@ -9,6 +9,8 @@ export const HEADERS = {
   internalCaller: 'x-internal-caller',
   /** The public widget key a shop page sends. Only the gateway reads it; it is stripped before forwarding. */
   widgetKey: 'x-helpix-widget-key',
+  /** The shop-signed shopper JWT the widget sends. Only the gateway reads it; it is stripped before forwarding. */
+  customerToken: 'x-helpix-customer-token',
 } as const
 
 /** The only accepted value of `HEADERS.internalCaller` on tenant-auth `/internal/*` routes. */

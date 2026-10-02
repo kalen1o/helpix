@@ -39,7 +39,7 @@ export function createAgentConfigClient(opts: {
       }
       if (res.status === 404) throw new AppError(404, 'tenant_not_found', 'Unknown shop')
       if (!res.ok || !json?.config) throw unavailable()
-      const published: PublishedAgentConfig = { tenantName: json.tenantName, config: json.config }
+      const published: PublishedAgentConfig = { tenantName: json.tenantName, config: json.config, orderLookup: json.orderLookup === true }
       cache.set(tenantId, published)
       return published
     },

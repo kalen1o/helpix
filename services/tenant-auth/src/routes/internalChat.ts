@@ -23,7 +23,7 @@ export const internalChatRoutes: FastifyPluginAsync<RouteDeps> = async (app, { d
       const found = await getPublishedConfig(db, req.params.tenantId)
       if (!found) throw new AppError(404, 'tenant_not_found', 'Tenant not found')
       if (found.status !== 'active') throw new AppError(403, 'tenant_suspended', "This shop's account is suspended")
-      return { tenantName: found.tenantName, config: found.config }
+      return { tenantName: found.tenantName, config: found.config, orderLookup: found.orderLookup }
     },
   )
 }

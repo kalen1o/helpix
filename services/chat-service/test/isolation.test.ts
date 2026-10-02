@@ -7,7 +7,9 @@ import {
   adminHeaders,
   buildTestApp,
   customerHeaders,
+  fakeConfigs,
   fakeKb,
+  fakeOrders,
   HIT,
   makeDeps,
   parseEvents,
@@ -112,7 +114,30 @@ describe('chat tenant isolation (spec §10)', () => {
     )
     app = await buildTestApp(makeDeps(db, { kb, chat }))
     const events = await parseEvents((await message(customerHeaders(TENANT_A), { message: 'Show me B' })).payload)
-    expect(kb.calls).toEqual([{ tenantId: TENANT_A, query: 'secret' }])
+    // The prefetch searches the customer's own words; the model's query is searched too, both scoped to tenant A only.
+    expect(kb.calls).toEqual([
+      { tenantId: TENANT_A, query: 'Show me B' },
+      { tenantId: TENANT_A, query: 'secret' },
+    ])
     expect(JSON.stringify(events)).not.toContain('B secret')
+  })
+
+  it("lookup_order only reads the requester's tenant and customer, whatever the model asks", async () => {
+    await app.close()
+    const orders = fakeOrders({ status: 'not_found' })
+    const chat = createScriptedChat((_req, call) =>
+      call === 0
+        ? [
+            {
+              type: 'tool_call',
+              call: { id: 'c1', name: 'lookup_order', arguments: JSON.stringify({ orderId: '2001', tenantId: TENANT_B, customerId: 'cust_b' }) },
+            },
+            { type: 'done', finishReason: 'tool_calls' },
+          ]
+        : [{ type: 'text', text: 'Not found.' }, { type: 'done', finishReason: 'stop' }],
+    )
+    app = await buildTestApp(makeDeps(db, { kb, chat, orders, agentConfigs: fakeConfigs({}, 'Test Shop', true) }))
+    await message(customerHeaders(TENANT_A, 'cust_a'), { message: 'Order 2001?' })
+    expect(orders.calls).toEqual([{ kind: 'get', tenantId: TENANT_A, customerId: 'cust_a', orderId: '2001' }])
   })
 })

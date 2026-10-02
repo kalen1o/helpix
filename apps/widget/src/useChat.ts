@@ -1,8 +1,9 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import type { ChatToolEvent } from '@helpix/shared/api-types'
 import { CHAT_MESSAGE_MAX, chatEvents } from '@helpix/shared/chat'
 import { readApiError, type SendBody, type WidgetApi } from './api'
-import { clearSession, loadHistory, loadSession, saveHistory, saveSession } from './storage'
+import type { Identity } from './identity'
+import { clearOwnedBy, clearSession, loadHistory, loadSession, saveHistory, saveSession } from './storage'
 
 export interface WidgetMessage {
   id: number
@@ -15,20 +16,53 @@ export interface WidgetMessage {
 
 const NETWORK_ERROR = "Couldn't reach the shop's assistant. Check your connection and try again."
 const CUT_OFF = 'The reply was cut off. Try again.'
+const TOKEN_REJECTED = "[helpix] the shop's sign-in token was rejected (expired or invalid); chatting as a guest"
 
-export function useChat({ api, widgetKey }: { api: WidgetApi; widgetKey: string }) {
+/** The one-off recoveries a turn may still make. */
+interface Recoveries {
+  staleConversation: boolean
+  guest: boolean
+}
+
+export function useChat({ api, widgetKey, identity }: { api: WidgetApi; widgetKey: string; identity: Identity }) {
+  // A conversation never changes owner. loadHistory returns this tab's transcript only to its owner;
+  // a stored session for someone else is left alone, and runTurn ignores it.
   let nextId = 1
   const messages: Ref<WidgetMessage[]> = ref(
-    loadHistory(widgetKey).map((m) => ({ ...m, id: nextId++, status: 'done' as const })),
+    loadHistory(widgetKey, identity.customerId).map((m) => ({ ...m, id: nextId++, status: 'done' as const })),
   )
   const busy = ref(false)
   let controller: AbortController | null = null
+  /** True while a rejected token is dropped, so that switch to a guest does not wipe the turn being resent. */
+  let droppingToken = false
+
+  // Sign-in, sign-out or another shopper: switch at once (sync), before anything else can be sent.
+  watch(
+    () => identity.customerId,
+    (next, prev) => {
+      if (!droppingToken) switchShopper(next, prev)
+    },
+    { flush: 'sync' },
+  )
+
+  /**
+   * The previous identity is gone from this tab: abort its reply and delete what it owned. The new identity gets its
+   * own stored conversation back if there is one (a shop that identifies after the widget mounted as a guest), and
+   * otherwise starts empty. Anything stored for a third person is left alone.
+   */
+  function switchShopper(next: string | null, prev: string | null): void {
+    controller?.abort()
+    controller = null
+    busy.value = false
+    clearOwnedBy(widgetKey, prev)
+    messages.value = loadHistory(widgetKey, next).map((m) => ({ ...m, id: nextId++, status: 'done' as const }))
+  }
 
   function persist() {
-    saveHistory(
-      widgetKey,
-      messages.value.filter((m) => m.status === 'done').map(({ role, content, tools }) => ({ role, content, tools })),
-    )
+    saveHistory(widgetKey, {
+      customerId: identity.customerId,
+      messages: messages.value.filter((m) => m.status === 'done').map(({ role, content, tools }) => ({ role, content, tools })),
+    })
   }
 
   /** The reactive copy of the reply bubble, so in-place updates re-render. */
@@ -43,20 +77,48 @@ export function useChat({ api, widgetKey }: { api: WidgetApi; widgetKey: string 
     m.error = error
   }
 
-  async function runTurn(text: string, replyId: number, signal: AbortSignal, allowFreshStart: boolean): Promise<void> {
-    const session = loadSession(widgetKey)
+  /** Drops a token the gateway rejected and keeps only this turn: earlier ones belonged to the signed-in shopper. */
+  function continueAsGuest(replyId: number) {
+    droppingToken = true
+    try {
+      identity.token = null
+      identity.customerId = null
+    } finally {
+      droppingToken = false
+    }
+    console.warn(TOKEN_REJECTED)
+    clearSession(widgetKey)
+    const at = messages.value.findIndex((m) => m.id === replyId)
+    if (at > 0) messages.value = messages.value.slice(at - 1)
+  }
+
+  async function runTurn(text: string, replyId: number, signal: AbortSignal, can: Recoveries): Promise<void> {
+    const owner = identity.customerId
+    const saved = loadSession(widgetKey)
+    // Another tab may have stored a conversation for someone else: never continue it as this shopper.
+    const session = saved && saved.customerId === owner ? saved : null
     const body: SendBody = { message: text }
     if (session) {
       body.conversationId = session.conversationId
       if (session.sessionToken) body.sessionToken = session.sessionToken
     }
+    // The token this request carries: a 401 only condemns it if the storefront has not replaced it since.
+    const sentToken = identity.token
     const res = await api.sendMessage(body, signal)
     if (!res.ok) {
       const err = await readApiError(res)
+      if (signal.aborted) return
       // A stored conversation can disappear (database reset, storage copied between browsers): start over once.
-      if (err.status === 404 && err.code === 'conversation_not_found' && session && allowFreshStart) {
+      if (err.status === 404 && err.code === 'conversation_not_found' && session && can.staleConversation) {
         clearSession(widgetKey)
-        return runTurn(text, replyId, signal, false)
+        return runTurn(text, replyId, signal, { ...can, staleConversation: false })
+      }
+      // An expired or rejected shop token must never break chat: drop it and resend this message as a guest, once.
+      if (err.status === 401 && err.code === 'invalid_customer_token' && sentToken && can.guest) {
+        // Refreshed meanwhile: the rejected token is already gone, so retry once with the current one.
+        if (identity.token !== sentToken) return runTurn(text, replyId, signal, { staleConversation: false, guest: false })
+        continueAsGuest(replyId)
+        return runTurn(text, replyId, signal, { staleConversation: false, guest: false })
       }
       return fail(replyId, err.message)
     }
@@ -68,7 +130,7 @@ export function useChat({ api, widgetKey }: { api: WidgetApi; widgetKey: string 
       if (!reply) return
       if (e.event === 'meta') {
         sessionToken = e.data.sessionToken ?? sessionToken
-        saveSession(widgetKey, { conversationId: e.data.conversationId, sessionToken })
+        saveSession(widgetKey, { conversationId: e.data.conversationId, sessionToken, customerId: owner })
       } else if (e.event === 'delta') {
         reply.content += e.data.text
       } else if (e.event === 'tool') {
@@ -91,7 +153,7 @@ export function useChat({ api, widgetKey }: { api: WidgetApi; widgetKey: string 
     const ctrl = new AbortController()
     controller = ctrl
     try {
-      await runTurn(text, reply.id, ctrl.signal, true)
+      await runTurn(text, reply.id, ctrl.signal, { staleConversation: true, guest: true })
     } catch {
       if (!ctrl.signal.aborted && messages.value.some((m) => m.id === reply.id)) fail(reply.id, NETWORK_ERROR)
     } finally {

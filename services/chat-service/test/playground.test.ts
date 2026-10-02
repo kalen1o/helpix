@@ -3,7 +3,7 @@ import { DEFAULT_AGENT_CONFIG, type Db } from '@helpix/shared'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { listMessages } from '../src/repos/messages'
-import { adminHeaders, buildTestApp, customerHeaders, fakeConfigs, makeDeps, parseEvents, resetDb, setupTestDb, superAdminHeaders, TENANT_A } from './helpers'
+import { adminHeaders, buildTestApp, customerHeaders, fakeConfigs, fakeOrders, makeDeps, ORDER, parseEvents, resetDb, setupTestDb, superAdminHeaders, TENANT_A } from './helpers'
 
 let db: Db
 beforeAll(async () => { db = await setupTestDb() })
@@ -66,5 +66,48 @@ describe('POST /chat/playground', () => {
     const res = await post(app, adminHeaders(TENANT_A), body({ config: { ...DEFAULT_AGENT_CONFIG, accentColor: 'mint' } }))
     expect(res.statusCode).toBe(400)
     await app.close()
+  })
+
+  it('turns on lookup_order for the test customer when the shop has order lookup', async () => {
+    const orders = fakeOrders({ status: 'ok', orders: [ORDER] })
+    const chat = createScriptedChat((_req, call) =>
+      call === 0
+        ? [{ type: 'tool_call', call: { id: 'c1', name: 'lookup_order', arguments: '{}' } }, { type: 'done', finishReason: 'tool_calls' }]
+        : answer('You have one order.'),
+    )
+    const app = await buildTestApp(makeDeps(db, { chat, orders, agentConfigs: fakeConfigs({}, 'Test Shop', true) }))
+    const events = await parseEvents((await post(app, adminHeaders(TENANT_A), body({ customerId: ' cust_maya ' }))).payload)
+    expect(chat.requests[0]!.tools!.map((t) => t.name)).toEqual(['search_kb', 'lookup_order'])
+    expect(orders.calls).toEqual([{ kind: 'list', tenantId: TENANT_A, customerId: 'cust_maya', orderId: null }])
+    expect(events.find((e) => e.event === 'tool' && e.data.name === 'lookup_order')!.data.orders).toEqual([{ orderId: '1001', status: 'shipped' }])
+    await app.close()
+  })
+
+  it('does not offer lookup_order without a test customer, or when the shop has no order API', async () => {
+    for (const [customerId, orderLookup] of [[null, true], ['cust_maya', false]] as const) {
+      const chat = createScriptedChat(() => answer('ok'))
+      const app = await buildTestApp(makeDeps(db, { chat, agentConfigs: fakeConfigs({}, 'Test Shop', orderLookup) }))
+      await post(app, adminHeaders(TENANT_A), body({ customerId }))
+      expect(chat.requests[0]!.tools!.map((t) => t.name)).toEqual(['search_kb'])
+      await app.close()
+    }
+  })
+
+  it("tells the model the test customer's sign-in state, without the customer id", async () => {
+    const cases = [
+      [' cust_maya ', true, 'The customer is signed in on Test Shop and verified.'],
+      [null, true, 'The customer is not signed in, so you cannot see any orders.'],
+      [null, false, 'Test Shop has not connected its order system'],
+      ['cust_maya', false, 'Test Shop has not connected its order system'],
+    ] as const
+    for (const [customerId, orderLookup, expected] of cases) {
+      const chat = createScriptedChat(() => answer('ok'))
+      const app = await buildTestApp(makeDeps(db, { chat, agentConfigs: fakeConfigs({}, 'Test Shop', orderLookup) }))
+      await post(app, adminHeaders(TENANT_A), body({ customerId }))
+      const system = chat.requests[0]!.messages[0]!.content
+      expect(system).toContain(expected)
+      expect(system).not.toContain('cust_maya')
+      await app.close()
+    }
   })
 })

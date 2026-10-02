@@ -33,6 +33,30 @@ describe('tenant-auth client', () => {
     expect(JSON.parse(call.body!)).toEqual({ widgetKey: 'wk_1', origin: 'https://shop.example' })
   })
 
+  it('sends the customer token to resolve-widget only when there is one', async () => {
+    const client = createTenantAuthClient(echo.url, TEST_INTERNAL_TOKEN)
+    await client.resolveWidget('wk_1', 'https://shop.example', 'req-1', 'h.p.s')
+    await client.resolveWidget('wk_1', 'https://shop.example', 'req-2')
+    expect(JSON.parse(echo.calls[0]!.body!)).toEqual({ widgetKey: 'wk_1', origin: 'https://shop.example', customerToken: 'h.p.s' })
+    expect(JSON.parse(echo.calls[1]!.body!)).toEqual({ widgetKey: 'wk_1', origin: 'https://shop.example' })
+  })
+
+  it('passes a 401 invalid_customer_token from resolve-widget through', async () => {
+    const stub = Fastify()
+    stub.post('/internal/resolve-widget', async (_req, reply) =>
+      reply.code(401).send({ error: { code: 'invalid_customer_token', message: 'Invalid customer token', requestId: 'r' } }),
+    )
+    await stub.listen({ port: 0, host: '127.0.0.1' })
+    const { port } = stub.server.address() as AddressInfo
+    try {
+      await expect(
+        createTenantAuthClient(`http://127.0.0.1:${port}`, TEST_INTERNAL_TOKEN).resolveWidget('wk_1', 'https://shop.example', 'req-3', 'h.p.s'),
+      ).rejects.toMatchObject({ status: 401, code: 'invalid_customer_token' })
+    } finally {
+      await stub.close()
+    }
+  })
+
   it('passes a 403 from resolve-widget through with its code', async () => {
     const stub = Fastify()
     stub.post('/internal/resolve-widget', async (_req, reply) =>

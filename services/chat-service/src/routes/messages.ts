@@ -38,7 +38,7 @@ export const messageRoutes: FastifyPluginAsync<ChatDeps> = async (app, deps) => 
       : { kind: 'anonymous', sessionToken: req.body.sessionToken ?? null }
 
     // Everything that can fail as a normal HTTP error happens before the stream opens.
-    const { tenantName, config } = await deps.agentConfigs.getPublished(tenantId, req.id)
+    const { tenantName, config, orderLookup } = await deps.agentConfigs.getPublished(tenantId, req.id)
     const { conversation, sessionToken } = await openConversation(deps.db, {
       tenantId,
       conversationId: req.body.conversationId ?? null,
@@ -46,7 +46,18 @@ export const messageRoutes: FastifyPluginAsync<ChatDeps> = async (app, deps) => 
     })
     await runTurn(
       deps,
-      { tenantId, requestId: req.id, conversation, sessionToken, shopName: tenantName, config, userMessage: req.body.message.trim() },
+      {
+        tenantId,
+        requestId: req.id,
+        conversation,
+        sessionToken,
+        shopName: tenantName,
+        config,
+        userMessage: req.body.message.trim(),
+        // Only the gateway-verified customer (spec 4b §2); a body customerId is dropped by the schema.
+        customerId: ctx.customerId ?? null,
+        orderLookup,
+      },
       openEventStream(req, reply),
       req.log,
     )

@@ -6,7 +6,7 @@ import type { WidgetMessage } from '../useChat'
 import Composer from './Composer.vue'
 import MessageBubble from './MessageBubble.vue'
 
-const props = defineProps<{ config: WidgetConfig; messages: WidgetMessage[]; busy: boolean }>()
+const props = defineProps<{ config: WidgetConfig; messages: WidgetMessage[]; busy: boolean; signedIn: boolean }>()
 defineEmits<{ send: [text: string]; retry: []; newChat: []; close: [] }>()
 
 const root = ref<HTMLElement | null>(null)
@@ -48,6 +48,11 @@ watch(
     </div>
 
     <Composer :busy="busy" @send="$emit('send', $event)" />
+
+    <!-- Order questions need the shop's sign-in; KB answers work for everyone. -->
+    <p v-if="config.orderLookup && !signedIn" data-helpix-signin-hint class="px-4 pb-1 text-center text-[12px] text-muted-foreground">
+      Sign in on {{ config.shopName }} to ask about your orders
+    </p>
 
     <footer class="flex items-center justify-center gap-1.5 pb-2.5 text-[12px] text-muted-foreground">
       <span>Powered by</span>

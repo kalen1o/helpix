@@ -2,6 +2,7 @@ import { createApp, reactive } from 'vue'
 import css from './widget.css?inline'
 import App from './App.vue'
 import { createWidgetApi, type WidgetApi, type WidgetTarget } from './api'
+import { createIdentity, setToken } from './identity'
 import { applyStyles, ensureFonts } from './shadowStyles'
 
 const HOST_ID = 'helpix-widget-host'
@@ -24,15 +25,26 @@ export interface WidgetController {
   open(): void
   close(): void
   destroy(): void
+  /** Chat as the shopper in this shop-signed token. A different shopper starts a new conversation. */
+  identify(jwt: string): void
+  /** Chat as a guest again, in a new conversation. */
+  logout(): void
 }
 
 export async function mountWidget(
   target: WidgetTarget,
-  opts: { api?: WidgetApi; doc?: Document; css?: string } = {},
+  opts: {
+    api?: WidgetApi
+    doc?: Document
+    css?: string
+    /** A token identify()'d before mount. Read once the config has loaded, before the chat reads its stored session. */
+    initialToken?: () => string | null
+  } = {},
 ): Promise<WidgetController | null> {
   const doc = opts.doc ?? document
   if (doc.getElementById(HOST_ID)) return null
-  const api = opts.api ?? createWidgetApi(target)
+  const identity = createIdentity()
+  const api = opts.api ?? createWidgetApi(target, undefined, () => identity.token)
 
   let config
   try {
@@ -56,8 +68,10 @@ export async function mountWidget(
     shadow.appendChild(root)
     doc.body.appendChild(host)
 
+    const initial = opts.initialToken?.() ?? null
+    if (initial !== null) setToken(identity, initial)
     const state = reactive({ open: false })
-    const app = createApp(App, { config, api, widgetKey: target.widgetKey, state })
+    const app = createApp(App, { config, api, widgetKey: target.widgetKey, state, identity })
     app.mount(root)
     return {
       open: () => { state.open = true },
@@ -66,6 +80,8 @@ export async function mountWidget(
         app.unmount()
         host.remove()
       },
+      identify: (jwt) => setToken(identity, jwt),
+      logout: () => setToken(identity, null),
     }
   } catch (err) {
     host.remove()

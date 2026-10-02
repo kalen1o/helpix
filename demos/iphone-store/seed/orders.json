@@ -1,0 +1,81 @@
+[
+  {
+    "customerId": "cust_maya",
+    "orderId": "1001",
+    "status": "delivered",
+    "placedAt": "2026-08-14T15:20:00.000Z",
+    "updatedAt": "2026-08-16T19:05:00.000Z",
+    "items": [{ "name": "Orchard One Pro", "quantity": 1, "variant": "Glacier · 256 GB" }],
+    "tracking": { "carrier": "Swift Parcel", "number": "SP4410290011", "url": "https://track.example.com/SP4410290011" }
+  },
+  {
+    "customerId": "cust_leo",
+    "orderId": "1002",
+    "status": "cancelled",
+    "placedAt": "2026-08-22T09:10:00.000Z",
+    "updatedAt": "2026-08-22T11:45:00.000Z",
+    "items": [{ "name": "Orchard Mini", "quantity": 1, "variant": "Ink · 128 GB" }],
+    "note": "Cancelled at the customer's request before it shipped. Refunded to the original payment method."
+  },
+  {
+    "customerId": "cust_ana",
+    "orderId": "1003",
+    "status": "returned",
+    "placedAt": "2026-08-28T18:30:00.000Z",
+    "updatedAt": "2026-09-12T10:00:00.000Z",
+    "items": [{ "name": "Orchard Buds", "quantity": 1, "variant": "Snow" }],
+    "note": "Returned within 30 days. A refund of $179.00 was issued on 12 September."
+  },
+  {
+    "customerId": "cust_leo",
+    "orderId": "1004",
+    "status": "delivered",
+    "placedAt": "2026-09-05T13:00:00.000Z",
+    "updatedAt": "2026-09-08T16:20:00.000Z",
+    "items": [
+      { "name": "Orchard One", "quantity": 1, "variant": "Sage · 256 GB" },
+      { "name": "Orchard Buds", "quantity": 1, "variant": "Snow" }
+    ],
+    "tracking": { "carrier": "Swift Parcel", "number": "SP4410290230", "url": "https://track.example.com/SP4410290230" }
+  },
+  {
+    "customerId": "cust_ana",
+    "orderId": "1005",
+    "status": "shipped",
+    "placedAt": "2026-09-27T12:15:00.000Z",
+    "updatedAt": "2026-09-29T07:40:00.000Z",
+    "items": [{ "name": "Orchard One", "quantity": 1, "variant": "Coral · 128 GB" }],
+    "eta": "2026-10-03T20:00:00.000Z",
+    "tracking": { "carrier": "Swift Parcel", "number": "SP4410290412", "url": "https://track.example.com/SP4410290412" }
+  },
+  {
+    "customerId": "cust_maya",
+    "orderId": "1006",
+    "status": "shipped",
+    "placedAt": "2026-09-29T20:05:00.000Z",
+    "updatedAt": "2026-09-30T14:30:00.000Z",
+    "items": [{ "name": "Orchard Buds", "quantity": 2, "variant": "Snow" }],
+    "eta": "2026-10-02T20:00:00.000Z",
+    "tracking": { "carrier": "Swift Parcel", "number": "SP4410290587", "url": "https://track.example.com/SP4410290587" },
+    "note": "Left the Reno warehouse. Arrives by 8 p.m. on the delivery day."
+  },
+  {
+    "customerId": "cust_leo",
+    "orderId": "1007",
+    "status": "processing",
+    "placedAt": "2026-09-30T08:50:00.000Z",
+    "updatedAt": "2026-09-30T08:50:00.000Z",
+    "items": [{ "name": "Orchard One Pro", "quantity": 1, "variant": "Graphite · 512 GB" }],
+    "eta": "2026-10-04T20:00:00.000Z",
+    "note": "Waiting for Graphite 512 GB stock. Ships within two days."
+  },
+  {
+    "customerId": "cust_maya",
+    "orderId": "1008",
+    "status": "processing",
+    "placedAt": "2026-10-01T16:40:00.000Z",
+    "updatedAt": "2026-10-01T16:40:00.000Z",
+    "items": [{ "name": "Orchard Mini", "quantity": 1, "variant": "Starlight · 256 GB" }],
+    "eta": "2026-10-03T20:00:00.000Z"
+  }
+]

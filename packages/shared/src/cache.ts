@@ -17,12 +17,14 @@ export class TtlCache<V> {
     return entry.value
   }
 
-  set(key: string, value: V): void {
+  /** `ttlMs` overrides the constructor TTL for this entry (the gateway caps it by a token's `exp`). */
+  set(key: string, value: V, ttlMs: number = this.ttlMs): void {
     this.entries.delete(key)
+    if (ttlMs <= 0) return
     if (this.entries.size >= this.maxEntries) {
       const oldest = this.entries.keys().next().value
       if (oldest !== undefined) this.entries.delete(oldest)
     }
-    this.entries.set(key, { value, expiresAt: this.now() + this.ttlMs })
+    this.entries.set(key, { value, expiresAt: this.now() + ttlMs })
   }
 }

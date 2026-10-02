@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { createPool, migrate } from '@helpix/shared'
 import { buildApp } from './app'
 import { loadConfig } from './config'
+import { createShopClient } from './lib/shopClient'
 import { seedSuperAdmin } from './seed'
 
 const config = loadConfig()
@@ -15,5 +16,9 @@ if (SEED_SUPERADMIN_EMAIL && SEED_SUPERADMIN_PASSWORD) {
   console.log(`tenant-auth: super-admin ${result}`)
 }
 
-const app = await buildApp({ db, config, logger: true })
+if (config.orderApiAllowPrivateHosts) {
+  console.warn('tenant-auth: ORDER_API_ALLOW_PRIVATE_HOSTS=true, so order APIs may use http:// and private addresses (development only)')
+}
+const shop = createShopClient({ allowPrivateHosts: config.orderApiAllowPrivateHosts })
+const app = await buildApp({ db, config, shop, logger: true })
 await app.listen({ port: config.port, host: '0.0.0.0' })

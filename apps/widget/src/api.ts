@@ -33,18 +33,25 @@ export async function readApiError(res: Response): Promise<WidgetApiError> {
   return new WidgetApiError(res.status, json?.error?.code ?? 'http_error', json?.error?.message ?? `Request failed (${res.status})`)
 }
 
-export function createWidgetApi(target: WidgetTarget, fetchImpl: typeof fetch = (...a) => fetch(...a)): WidgetApi {
+export function createWidgetApi(
+  target: WidgetTarget,
+  fetchImpl: typeof fetch = (...a) => fetch(...a),
+  /** The signed-in shopper's token, read on every send so identify/logout apply to the next message. */
+  getToken: () => string | null = () => null,
+): WidgetApi {
   const headers = { 'x-helpix-widget-key': target.widgetKey }
   return {
+    // Never sends the shopper token: an expired one must not stop the widget from loading.
     async fetchConfig() {
       const res = await fetchImpl(`${target.apiBase}/widget/config`, { headers })
       if (!res.ok) throw await readApiError(res)
       return (await res.json()) as WidgetConfig
     },
     sendMessage(body, signal) {
+      const token = getToken()
       return fetchImpl(`${target.apiBase}/chat/messages`, {
         method: 'POST',
-        headers: { ...headers, 'content-type': 'application/json' },
+        headers: { ...headers, 'content-type': 'application/json', ...(token ? { 'x-helpix-customer-token': token } : {}) },
         body: JSON.stringify(body),
         signal,
       })

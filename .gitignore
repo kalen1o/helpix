@@ -5,3 +5,6 @@ dist/
 .DS_Store
 .data/
 *.local
+
+# Demo shop state written by the demo backend and make seed-demos (customers, orders, private key, API key).
+demos/*/.data/

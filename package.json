@@ -15,7 +15,7 @@
     "db:up": "docker compose up -d postgres",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "smoke": "node --env-file=.env scripts/smoke-step1.mjs && node --env-file=.env scripts/smoke-step2.mjs && node --env-file=.env scripts/smoke-step3.mjs && node --env-file=.env scripts/smoke-step4a.mjs",
+    "smoke": "node --env-file=.env scripts/smoke-step1.mjs && node --env-file=.env scripts/smoke-step2.mjs && node --env-file=.env scripts/smoke-step3.mjs && node --env-file=.env scripts/smoke-step4a.mjs && node --env-file=.env scripts/smoke-step4b.mjs",
     "build": "npm run build --workspaces --if-present",
     "screenshots": "node --env-file=.env scripts/screenshots.mjs"
   },

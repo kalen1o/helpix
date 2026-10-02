@@ -8,7 +8,7 @@ const HOP_BY_HOP = new Set([
   'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
   'te', 'trailer', 'transfer-encoding', 'upgrade', 'host',
 ])
-const STRIP_FROM_CLIENT = new Set([...IDENTITY_HEADERS, 'authorization', HEADERS.widgetKey, HEADERS.requestId])
+const STRIP_FROM_CLIENT = new Set([...IDENTITY_HEADERS, 'authorization', HEADERS.widgetKey, HEADERS.customerToken, HEADERS.requestId])
 
 export interface ForwardOptions {
   target: string

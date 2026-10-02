@@ -16,6 +16,10 @@ function boot() {
 
   let controller: WidgetController | null = null
   let openRequested = false
+  // Before mount only the latest call counts: identify() keeps its token, logout() forgets it.
+  let pendingToken: string | null = null
+  // What the widget mounted with, to pass on a call that lands between that read and the mount finishing.
+  let mountedWith: string | null = null
 
   window.Helpix = {
     open: () => (controller ? controller.open() : (openRequested = true)),
@@ -23,9 +27,14 @@ function boot() {
       openRequested = false
       controller?.close()
     },
-    // Shop sign-in arrives in step 4b; until then the widget always chats as an anonymous visitor.
-    identify: () => {},
-    logout: () => {},
+    identify: (jwt: string) => {
+      if (controller) controller.identify(jwt)
+      else pendingToken = jwt
+    },
+    logout: () => {
+      if (controller) controller.logout()
+      else pendingToken = null
+    },
   }
 
   function start() {
@@ -33,9 +42,14 @@ function boot() {
       console.warn('[helpix] add data-widget-key to the helpix-widget.js script tag')
       return
     }
-    mountWidget(target)
+    mountWidget(target, { initialToken: () => (mountedWith = pendingToken) })
       .then((c) => {
         controller = c
+        if (c && pendingToken !== mountedWith) {
+          if (pendingToken) c.identify(pendingToken)
+          else c.logout()
+        }
+        pendingToken = null
         if (c && openRequested) c.open()
       })
       .catch((err) => console.warn('[helpix] chat widget disabled:', err instanceof Error ? err.message : err))

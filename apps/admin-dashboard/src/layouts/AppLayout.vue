@@ -13,6 +13,7 @@ const route = useRoute()
 const TENANT_NAV = [
   { to: '/kb', label: 'Knowledge base' },
   { to: '/agent', label: 'Agent' },
+  { to: '/integrations', label: 'Integrations' },
   { to: '/conversations', label: 'Conversations' },
 ]
 const SUPER_NAV = [{ to: '/tenants', label: 'Tenants' }]

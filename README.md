@@ -94,7 +94,7 @@ Suspending stops the shop's widget and blocks its admins from signing in. No dat
 
 ```bash
 make setup    # npm install; creates .env from .env.example (then change the secrets)
-make start    # Docker stack (postgres :5433, tenant-auth, kb-service, chat-service, gateway http://localhost:4000) + dashboard http://localhost:5173
+make start    # Docker stack (postgres :5433, tenant-auth, kb-service, chat-service, gateway http://localhost:4000) + dashboard http://localhost:5173 + Orchard Store storefront http://localhost:5174 and its backend :4101
 make dev      # or: hot reload — postgres in Docker, services and dashboard run locally; Ctrl-C stops all
 make down     # stop the Docker stack (data is kept)
 make reset-db # delete ALL data and reseed the super-admin from .env (asks first; FORCE=1 skips)
@@ -103,6 +103,8 @@ make reset-db # delete ALL data and reseed the super-admin from .env (asks first
 Embeddings default to an offline `fake` provider, which is fine for development. For real answers use GLM: set `EMBEDDING_PROVIDER=openai-compatible` and `EMBEDDING_API_KEY` in `.env` (see `.env.example`). If your `.env` predates the knowledge base, copy the `KB_SERVICE_URL` and `EMBEDDING_*` lines from `.env.example` into it. kb-service needs pgvector 0.8 or newer (the Docker image `pgvector/pgvector:pg16` provides it), because search uses `hnsw.iterative_scan`.
 
 The agent's chat model is configured separately, with the `CHAT_*` variables. `CHAT_PROVIDER=fake` works offline: it searches the knowledge base and quotes the top hit, which is enough to try the playground. For real answers, set `CHAT_PROVIDER=openai-compatible` and `CHAT_API_KEY` (GLM `glm-4.5-air` by default). If your `.env` predates the agent, add `CHAT_SERVICE_URL=http://localhost:4003` and the other `CHAT_*` lines from `.env.example`.
+
+tenant-auth encrypts each shop's order API key with `SECRETS_MASTER_KEY` and refuses to start without it. Generate one with `openssl rand -base64 32` and put it in `.env`. If your `.env` predates order lookup, also add `ORDER_API_ALLOW_PRIVATE_HOSTS=true` (local demos only; keep it `false` in production).
 
 Run `make` to list every target. Without make: `docker compose up -d --build` then `npm run dev -w apps/admin-dashboard`.
 
@@ -116,9 +118,17 @@ Any shop embeds the support widget with one script tag (use your gateway URL and
 <script src="http://localhost:4000/widget/helpix-widget.js" data-widget-key="wk_..." defer></script>
 ```
 
-To try it, start the stack (`make start` or `make dev`) and run `make seed-demos`. It creates the Orchard Store tenant with its knowledge base and published agent config, and writes the widget key to `demos/iphone-store/.env.development.local`. Then open the store at http://localhost:5174 (restart the demo dev server if it was already running). Sign in to the dashboard as the shop admin with the credentials in `demos/iphone-store/seed/shop.json`.
+To try it, start the stack (`make start` or `make dev`; both also run the Orchard Store storefront on :5174 and its backend on :4101) and run `make seed-demos`. It creates the Orchard Store tenant with its knowledge base and published agent config, writes the widget key to `demos/iphone-store/.env.development.local`, and sets up shopper sign-in and order lookup (below). Then open the store at http://localhost:5174 (restart the demo dev server if it was already running). Sign in to the dashboard as the shop admin with the credentials in `demos/iphone-store/seed/shop.json`.
 
-The widget only works from origins on the tenant's allowed-origin list, which the super-admin edits on the tenant page (`make seed-demos` sets it for the demo). Pages can control it with `window.Helpix.open()` and `window.Helpix.close()`.
+**Shopper accounts and orders.** The store has demo accounts `maya@orchard.demo`, `leo@orchard.demo` and `ana@orchard.demo`, all with password `orchard-demo`, and each has a few orders. Sign in, open the chat and ask "where's my order?": the agent calls `lookup_order`, which asks the shop's own order API, and answers from what the shop returns. You can also create an account and place a demo order (no payment) from the bag. Signed out, the widget shows "Sign in on Orchard Store to ask about your orders" and never sees order data.
+
+How it fits together:
+- The shop signs a short-lived RS256 JWT for the signed-in shopper (`sub` = customer ID, `aud` = the tenant's widget key, `exp` at most 1 hour) and passes it with `window.Helpix.identify(jwt)`. On sign-out it calls `window.Helpix.logout()`. Either one starts a new conversation.
+- The tenant admin sets this up on the dashboard's **Integrations** page: the shop's public key (the shop keeps the private key), and the order API base URL and key. "Test connection" calls the API for a test customer. The key is stored encrypted and never shown again.
+- Helpix calls `GET {baseUrl}/orders/{orderId}` and `GET {baseUrl}/orders?limit=5` with `Authorization: Bearer <key>` and `X-Customer-Id`. The customer ID always comes from the verified token, never from the model.
+- `make seed-demos` generates the demo's key pair, order API key and session secret into `demos/iphone-store/.data/` (gitignored, kept on re-runs), saves them on the tenant and runs the connection test, so the demo backend must be running. When tenant-auth runs in Docker the test reaches the backend through `host.docker.internal`; with `make dev` it uses `localhost`. To override, set a shell variable: `DEMO_ORDER_API_URL=http://... make seed-demos` (a value in `.env` is ignored).
+
+The widget only works from origins on the tenant's allowed-origin list, which the super-admin edits on the tenant page (`make seed-demos` sets it for the demo). Pages can control it with `window.Helpix.open()`, `close()`, `identify(jwt)` and `logout()`.
 
 **Shadow DOM styling.** The widget renders inside a shadow root so the shop's CSS cannot touch it. Spike results (verified in Chrome): inside a shadow root Tailwind 4's `@property` rules are ignored, so shadows, rings, transforms and gradients computed to `none`. The fix (`shadowSafeCss` in `apps/widget/src/shadowStyles.ts`) re-declares each registered `--tw-*` initial value in a `@layer properties` rule prepended to the CSS, so every utility still overrides it; with it the shadow-root rendering matched the light DOM exactly. Theme tokens must also be declared on `:host` (`:root` matches nothing in a shadow root), and `:host { all: initial }` stops the shop page's inherited font and colour leaking in. A native `<dialog>` works inside the shadow root (top layer, styled backdrop).
 
@@ -127,7 +137,7 @@ The widget only works from origins on the tenant's allowed-origin list, which th
 ```bash
 make test       # starts postgres if needed; tests use the helpix_test database on port 5433
 make typecheck
-make smoke      # end-to-end through the gateway (tenants, knowledge base, agent, widget); needs the full stack running (make up)
+make smoke      # end-to-end through the gateway (tenants, knowledge base, agent, widget, order lookup); needs the full stack running (make up)
 ```
 
 > [!NOTE]

@@ -13,13 +13,14 @@ help: ## Show this help
 setup: .env ## Install dependencies and create .env if missing
 	npm install
 
-start: up ## Docker stack (gateway :4000 serves the widget) + dashboard :5173 + Orchard Store demo :5174
+start: up ## Docker stack (gateway :4000 serves the widget) + dashboard :5173 + Orchard Store demo :5174 and its backend :4101
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
 	npm run dev -w apps/admin-dashboard & \
+	npm run server -w demos/iphone-store & \
 	npm run dev -w demos/iphone-store & \
 	wait
 
-dev: .env db ## Hot reload: postgres in Docker; tenant-auth, kb-service, chat-service, gateway and dashboard, widget (rebuilt on change) and Orchard Store demo run locally (Ctrl-C stops all)
+dev: .env db ## Hot reload: postgres in Docker; tenant-auth, kb-service, chat-service, gateway and dashboard, widget (rebuilt on change) and Orchard Store demo + backend run locally (Ctrl-C stops all)
 	docker compose stop gateway tenant-auth kb-service chat-service
 	npm run build -w apps/widget
 	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
@@ -29,6 +30,7 @@ dev: .env db ## Hot reload: postgres in Docker; tenant-auth, kb-service, chat-se
 	PORT=4000 npm run dev -w services/gateway & \
 	npm run dev -w apps/admin-dashboard & \
 	npm run dev -w apps/widget & \
+	npm run server -w demos/iphone-store & \
 	npm run dev -w demos/iphone-store & \
 	wait
 
@@ -77,8 +79,19 @@ smoke: ## End-to-end smoke test through the gateway: tenants, knowledge base, ag
 screenshots: ## Capture README screenshots of the dashboard (needs the stack + dashboard running; uses Google Chrome)
 	npm run screenshots
 
-seed-demos: .env ## Create or refresh the demo shop tenants (KB, agent config, widget key) through the gateway (needs the stack running)
-	node --env-file=.env scripts/seed-demos.mjs
+# tenant-auth calls the Orchard backend on the host: from Docker that is host.docker.internal, from `make dev` localhost.
+# The mode is read from whether the tenant-auth container is running; set DEMO_ORDER_API_URL to override.
+seed-demos: .env ## Create or refresh the demo shops (KB, agent, widget key, shop sign-in key, order API) through the gateway (needs the stack and the demo backend running)
+	@url="$${DEMO_ORDER_API_URL:-}"; \
+	if [ -z "$$url" ]; then \
+	  if [ -n "$$(docker compose ps --status running -q tenant-auth 2>/dev/null)" ]; then url=http://host.docker.internal:4101; \
+	  else url=http://localhost:4101; fi; \
+	fi; \
+	echo "seed-demos: tenant-auth will call the Orchard order API at $$url"; \
+	DEMO_ORDER_API_URL="$$url" node --env-file=.env scripts/seed-demos.mjs
 
-demo: ## Run the Orchard Store demo dev server (http://localhost:5174)
-	npm run dev -w demos/iphone-store
+demo: ## Run the Orchard Store demo: storefront http://localhost:5174 and its backend :4101 (Ctrl-C stops both)
+	@trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT; \
+	npm run server -w demos/iphone-store & \
+	npm run dev -w demos/iphone-store & \
+	wait

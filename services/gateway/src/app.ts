@@ -51,7 +51,7 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
       cb(null, {
         origin: widget ? true : config.corsOrigins,
         methods: [...METHODS],
-        allowedHeaders: widget ? ['content-type', HEADERS.widgetKey] : ['content-type', 'authorization'],
+        allowedHeaders: widget ? ['content-type', HEADERS.widgetKey, HEADERS.customerToken] : ['content-type', 'authorization'],
         exposedHeaders: [HEADERS.requestId],
       })
     },
@@ -116,6 +116,8 @@ export async function buildGateway(deps: GatewayDeps): Promise<FastifyInstance> 
     ['/me', '/me', config.tenantAuthUrl],
     ['/admin/*', '/admin', config.tenantAuthUrl],
     ['/agent/*', '/agent', config.tenantAuthUrl],
+    ['/integrations', '/integrations', config.tenantAuthUrl],
+    ['/integrations/*', '/integrations', config.tenantAuthUrl],
     ['/kb/*', '/kb', config.kbServiceUrl],
     ['/chat/*', '/chat', config.chatServiceUrl],
   ] as const) {

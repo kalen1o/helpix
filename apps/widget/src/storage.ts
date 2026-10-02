@@ -3,6 +3,8 @@ import type { ChatToolEvent } from '@helpix/shared/api-types'
 export interface StoredSession {
   conversationId: string
   sessionToken: string | null
+  /** The shopper who owns the conversation; null for a guest. A conversation never changes owner. */
+  customerId: string | null
 }
 
 export interface StoredMessage {
@@ -45,7 +47,12 @@ const session = () => window.sessionStorage
 export function loadSession(widgetKey: string): StoredSession | null {
   const v = read(local, keyFor(widgetKey)) as Partial<StoredSession> | null
   if (!v || typeof v.conversationId !== 'string') return null
-  return { conversationId: v.conversationId, sessionToken: typeof v.sessionToken === 'string' ? v.sessionToken : null }
+  return {
+    conversationId: v.conversationId,
+    sessionToken: typeof v.sessionToken === 'string' ? v.sessionToken : null,
+    // Sessions stored before shopper sign-in existed have no owner field: they belong to a guest.
+    customerId: typeof v.customerId === 'string' ? v.customerId : null,
+  }
 }
 
 export function saveSession(widgetKey: string, s: StoredSession): void {
@@ -57,15 +64,36 @@ export function clearSession(widgetKey: string): void {
   remove(session, keyFor(widgetKey))
 }
 
-export function loadHistory(widgetKey: string): StoredMessage[] {
-  const v = read(session, keyFor(widgetKey))
-  if (!Array.isArray(v)) return []
-  return v.filter(
-    (m): m is StoredMessage =>
-      !!m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && Array.isArray(m.tools),
-  )
+const isMessage = (m: unknown): m is StoredMessage => {
+  const v = m as StoredMessage | null
+  return !!v && (v.role === 'user' || v.role === 'assistant') && typeof v.content === 'string' && Array.isArray(v.tools)
 }
 
-export function saveHistory(widgetKey: string, messages: StoredMessage[]): void {
-  write(session, keyFor(widgetKey), messages)
+function historyOwner(v: unknown): string | null {
+  if (Array.isArray(v)) return null
+  const owner = (v as { customerId?: unknown } | null)?.customerId
+  return typeof owner === 'string' ? owner : null
+}
+
+/**
+ * This tab's finished messages, only if they belong to `customerId` (null for a guest); otherwise empty. Nothing is
+ * removed: a transcript stays in storage for its owner, and is never shown to anyone else. A bare array, written
+ * before shopper sign-in existed, belongs to a guest.
+ */
+export function loadHistory(widgetKey: string, customerId: string | null): StoredMessage[] {
+  const v = read(session, keyFor(widgetKey))
+  const list = Array.isArray(v) ? v : (v as { messages?: unknown } | null)?.messages
+  if (!Array.isArray(list) || historyOwner(v) !== customerId) return []
+  return list.filter(isMessage)
+}
+
+/** Removes the stored session and this tab's transcript, but only those that belong to `customerId`. */
+export function clearOwnedBy(widgetKey: string, customerId: string | null): void {
+  if (loadSession(widgetKey)?.customerId === customerId) remove(local, keyFor(widgetKey))
+  const v = read(session, keyFor(widgetKey))
+  if (v !== null && historyOwner(v) === customerId) remove(session, keyFor(widgetKey))
+}
+
+export function saveHistory(widgetKey: string, history: { customerId: string | null; messages: StoredMessage[] }): void {
+  write(session, keyFor(widgetKey), history)
 }

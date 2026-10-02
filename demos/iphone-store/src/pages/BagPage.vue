@@ -1,9 +1,31 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import ProductVisual from '../components/ProductVisual.vue'
-import { bag, bagCount, bagTotal, removeFromBag } from '../cart'
+import { auth, checkout, ShopApiError } from '../auth'
+import { bag, bagCount, bagTotal, clearBag, removeFromBag } from '../cart'
 import { formatCapacity, formatPrice, productById } from '../products'
 
+const router = useRouter()
+const placing = ref(false)
+const error = ref('')
+
 const linePrice = (productId: string, gb: number) => productById(productId)?.storage.find((s) => s.gb === gb)?.priceCents ?? 0
+
+async function placeOrder() {
+  if (placing.value) return
+  placing.value = true
+  error.value = ''
+  try {
+    const { orderId } = await checkout(bag.value)
+    clearBag()
+    await router.push(`/order/${orderId}`)
+  } catch (e) {
+    error.value = e instanceof ShopApiError ? e.message : 'Could not place the order. Please try again.'
+  } finally {
+    placing.value = false
+  }
+}
 </script>
 
 <template>
@@ -48,8 +70,17 @@ const linePrice = (productId: string, gb: number) => productById(productId)?.sto
           <dd class="font-display text-2xl font-semibold tabular-nums tracking-tight">{{ formatPrice(bagTotal) }}</dd>
         </div>
       </dl>
-      <button type="button" disabled class="btn-gold mt-6 w-full" aria-describedby="checkout-note">Check out</button>
-      <p id="checkout-note" class="mt-3 text-center text-xs text-ink-3">Checkout is switched off in this demo shop.</p>
+      <template v-if="auth.customer">
+        <button type="button" class="btn-gold mt-6 w-full" :disabled="placing" aria-describedby="checkout-note" @click="placeOrder">
+          {{ placing ? 'Placing order…' : 'Place demo order (no payment)' }}
+        </button>
+        <p v-if="error" class="mt-3 text-center text-sm text-alert" role="alert">{{ error }}</p>
+        <p v-else id="checkout-note" class="mt-3 text-center text-xs text-ink-3">Demo shop: no payment is taken and nothing ships.</p>
+      </template>
+      <template v-else>
+        <RouterLink :to="{ path: '/signin', query: { next: '/bag' } }" class="btn-gold mt-6 w-full">Sign in to check out</RouterLink>
+        <p class="mt-3 text-center text-xs text-ink-3">Checkout needs a demo account so the assistant can find your order.</p>
+      </template>
     </aside>
   </div>
 </template>

@@ -4,6 +4,7 @@ import { createPool, migrate } from '@helpix/shared'
 import { buildApp } from './app'
 import { createAgentConfigClient } from './clients/agentConfig'
 import { createKbClient } from './clients/kb'
+import { createOrdersClient } from './clients/orders'
 import { loadConfig } from './config'
 
 const config = loadConfig()
@@ -26,6 +27,7 @@ const app = await buildApp(
       internalToken: config.internalToken,
       cacheTtlMs: config.configCacheTtlMs,
     }),
+    orders: createOrdersClient({ baseUrl: config.tenantAuthUrl, internalToken: config.internalToken }),
   },
   { logger: true },
 )

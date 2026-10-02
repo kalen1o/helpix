@@ -122,11 +122,11 @@ describe('tenant admin agent config', () => {
 describe('GET /internal/agent-config/:tenantId', () => {
   it('returns the shop name and the published config, or the defaults before publishing', async () => {
     const a = await tenant('shop-a', 'iPhone Store')
-    expect((await internalGet(a.id)).json()).toEqual({ tenantName: 'iPhone Store', config: DEFAULT_AGENT_CONFIG })
+    expect((await internalGet(a.id)).json()).toEqual({ tenantName: 'iPhone Store', config: DEFAULT_AGENT_CONFIG, orderLookup: false })
     await putDraft(a.headers, config())
     expect((await internalGet(a.id)).json().config).toEqual(DEFAULT_AGENT_CONFIG)
     await publish(a.headers)
-    expect((await internalGet(a.id)).json()).toEqual({ tenantName: 'iPhone Store', config: config() })
+    expect((await internalGet(a.id)).json()).toEqual({ tenantName: 'iPhone Store', config: config(), orderLookup: false })
   })
 
   it('accepts only the chat caller', async () => {

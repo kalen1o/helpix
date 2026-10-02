@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+import { startAuth } from './auth'
 import { router } from './router'
 import './styles.css'
 
@@ -8,3 +9,4 @@ if (!import.meta.env.VITE_HELPIX_WIDGET_KEY) {
 }
 
 createApp(App).use(router).mount('#app')
+startAuth()

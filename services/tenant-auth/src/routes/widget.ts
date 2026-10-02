@@ -19,7 +19,7 @@ export const widgetRoutes: FastifyPluginAsync<RouteDeps> = async (app, { db }) =
       shopName: found.tenantName,
       greeting: found.config.greeting,
       accentColor: found.config.accentColor,
-      orderLookup: false,
+      orderLookup: found.orderLookup,
     }
   })
 }

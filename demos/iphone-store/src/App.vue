@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { auth, signOut } from './auth'
 import { bagCount } from './cart'
+
+const firstName = computed(() => auth.customer?.name.split(/\s+/)[0] ?? '')
 </script>
 
 <template>
@@ -22,6 +26,23 @@ import { bagCount } from './cart'
         Bag
         <span class="grid min-w-5 place-items-center rounded-pill px-1 font-mono text-xs tabular-nums" :class="bagCount ? 'bg-gold text-gold-ink' : 'text-ink-3'">{{ bagCount }}</span>
       </RouterLink>
+      <RouterLink
+        v-if="!auth.customer"
+        to="/signin"
+        class="whitespace-nowrap rounded-pill px-3 py-1.5 text-sm text-ink-2 transition-colors hover:text-ink"
+      >
+        Sign in
+      </RouterLink>
+      <template v-else>
+        <span class="max-w-[9ch] truncate pl-2 text-sm text-ink" :title="auth.customer.email">{{ firstName }}</span>
+        <button
+          type="button"
+          class="whitespace-nowrap rounded-pill px-3 py-1.5 text-sm text-ink-2 transition-colors hover:text-ink"
+          @click="signOut()"
+        >
+          Sign out
+        </button>
+      </template>
     </nav>
 
     <main class="mx-auto w-full max-w-6xl flex-1 px-4 pt-24 sm:px-6">

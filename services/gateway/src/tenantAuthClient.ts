@@ -3,8 +3,11 @@ import type { ResolvedAdmin, ResolvedWidget } from '@helpix/shared/api-types'
 
 export interface TenantAuthClient {
   resolveAdmin(accessToken: string, requestId: string): Promise<ResolvedAdmin>
-  /** The tenant for a widget key used from `origin`; 401/403 from tenant-auth pass through. */
-  resolveWidget(widgetKey: string, origin: string, requestId: string): Promise<ResolvedWidget>
+  /**
+   * The tenant for a widget key used from `origin` and, when a shopper token is given and verifies, the customer.
+   * 401/403 from tenant-auth (including 401 invalid_customer_token) pass through.
+   */
+  resolveWidget(widgetKey: string, origin: string, requestId: string, customerToken?: string): Promise<ResolvedWidget>
 }
 
 export function createTenantAuthClient(baseUrl: string, internalToken: string): TenantAuthClient {
@@ -34,7 +37,11 @@ export function createTenantAuthClient(baseUrl: string, internalToken: string): 
 
   return {
     resolveAdmin: (accessToken, requestId) => post<ResolvedAdmin>('/internal/resolve-admin', { accessToken }, requestId),
-    resolveWidget: (widgetKey, origin, requestId) =>
-      post<ResolvedWidget>('/internal/resolve-widget', { widgetKey, origin }, requestId),
+    resolveWidget: (widgetKey, origin, requestId, customerToken) =>
+      post<ResolvedWidget>(
+        '/internal/resolve-widget',
+        customerToken === undefined ? { widgetKey, origin } : { widgetKey, origin, customerToken },
+        requestId,
+      ),
   }
 }
