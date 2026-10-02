@@ -1,0 +1,218 @@
+@import "@helpix/ui/styles.css";
+@import "./tokens.css";
+@source "./";
+
+/* The helpix base layer reads these names; point them at Orchard's tokens. */
+:root {
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-2);
+  --card-foreground: var(--color-ink);
+  --primary: var(--color-ink);
+  --primary-foreground: var(--color-paper);
+  --muted: var(--color-paper-2);
+  --muted-foreground: var(--color-ink-2);
+  --border: var(--color-rule);
+  --input: var(--color-rule);
+  --ring: var(--color-gold);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    /* Two fixed blooms: warm light from the upper right, a cool fill from the left. */
+    background:
+      radial-gradient(60rem 40rem at 85% -10%, var(--color-bloom-warm), transparent 70%) fixed,
+      radial-gradient(50rem 40rem at -10% 40%, var(--color-bloom-cool), transparent 70%) fixed,
+      var(--color-paper);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-style: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+  }
+}
+
+/* Primary pill: champagne fill, the only filled control on a page. */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  white-space: nowrap;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: var(--color-gold-ink);
+  padding: 0.875rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  transition: transform var(--dur-short) var(--ease-out), opacity var(--dur-short) var(--ease-out);
+}
+.btn-gold:hover { opacity: 0.9; }
+.btn-gold:active { transform: scale(0.98); }
+.btn-gold:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Secondary pill: outlined, ink text. */
+.btn-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  white-space: nowrap;
+  border-radius: var(--radius-pill);
+  border: var(--rule-hair) solid var(--color-rule);
+  color: var(--color-ink);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+}
+.btn-line:hover { border-color: var(--color-ink-3); }
+.btn-line:active { transform: scale(0.98); }
+
+/* Text field on the dark stage. */
+.field {
+  width: 100%;
+  border-radius: 1rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  background: var(--color-paper-2);
+  padding: 0.75rem 1rem;
+  color: var(--color-ink);
+  font-weight: 400;
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+.field:hover { border-color: var(--color-ink-3); }
+.field:focus { border-color: var(--color-gold); outline: none; }
+.field[aria-invalid="true"] { border-color: var(--color-alert); }
+
+/* A lit stage: the floor the product art stands on. */
+.stage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-stage);
+  background:
+    radial-gradient(70% 55% at 50% 38%, var(--color-paper-3), transparent 75%),
+    var(--color-paper-2);
+}
+
+/* ---- Product art (CSS only). Everything is in em, so `font-size` scales the whole object. ---- */
+.phone {
+  position: relative;
+  width: 10em;
+  height: 20.5em;
+  flex: none;
+  border-radius: 2.1em;
+  background: linear-gradient(155deg, var(--art-accent) 0%, var(--art-body) 42%, var(--art-body) 78%, color-mix(in oklch, var(--art-body), black 22%) 100%);
+  box-shadow:
+    inset 0 0 0 0.2em color-mix(in oklch, var(--art-accent), white 12%),
+    inset 0 0 0 0.32em color-mix(in oklch, var(--art-body), black 30%),
+    inset 0.6em 0.8em 1.6em -0.6em color-mix(in oklch, var(--art-accent), white 30%),
+    0 2.4em 3.2em -1.4em var(--color-shadow);
+}
+.phone__plateau {
+  position: absolute;
+  top: 0.95em;
+  left: 0.95em;
+  width: 4.5em;
+  height: 4.5em;
+  border-radius: 1.35em;
+  background: color-mix(in oklch, var(--art-body), black 14%);
+  box-shadow:
+    inset 0 0 0 0.08em color-mix(in oklch, var(--art-accent), white 10%),
+    0 0.3em 0.6em -0.2em var(--color-shadow);
+}
+.phone__lens {
+  position: absolute;
+  width: 1.75em;
+  height: 1.75em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--color-glass-hi), var(--color-glass) 45%);
+  box-shadow:
+    0 0 0 0.16em color-mix(in oklch, var(--art-accent), black 25%),
+    0 0 0 0.24em color-mix(in oklch, var(--art-body), black 35%);
+}
+.phone__lens--a { top: 0.42em; left: 0.42em; }
+.phone__lens--b { bottom: 0.42em; left: 0.42em; }
+.phone__lens--c { top: 1.37em; right: 0.42em; }
+.phone__flash {
+  position: absolute;
+  top: 0.75em;
+  right: 0.75em;
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--art-accent), white 40%);
+}
+.phone__mark {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 1.6em;
+  height: 1.6em;
+  translate: -50% -50%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.16em color-mix(in oklch, var(--art-accent), white 8%);
+  opacity: 0.55;
+}
+
+.bud {
+  position: relative;
+  width: 3.6em;
+  height: 9.5em;
+  flex: none;
+}
+.bud__head {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3.6em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--art-accent), var(--art-body) 70%);
+  box-shadow: 0 0.6em 1.2em -0.6em var(--color-shadow);
+}
+.bud__tip {
+  position: absolute;
+  top: 1.05em;
+  left: 1.05em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--art-body), black 55%);
+}
+.bud__stem {
+  position: absolute;
+  top: 2.6em;
+  left: 1.05em;
+  width: 1.5em;
+  height: 6.9em;
+  border-radius: 0.75em;
+  background: linear-gradient(90deg, var(--art-accent), var(--art-body) 60%, color-mix(in oklch, var(--art-body), black 12%));
+  box-shadow: 0 1.4em 1.6em -1em var(--color-shadow);
+}
+
+/* The soft floor shadow under any product. */
+.art-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -1.6em;
+  width: 140%;
+  height: 1.6em;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--color-shadow), transparent);
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

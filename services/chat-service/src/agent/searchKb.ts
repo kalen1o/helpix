@@ -29,7 +29,8 @@ const MAX_QUERY_CHARS = 500
 const NOTHING_FOUND = "Nothing relevant is in the shop's knowledge base. Say you don't know and suggest contacting the shop directly."
 const KB_DOWN = "The knowledge base is unavailable right now. Tell the customer you could not check the shop's documents."
 
-function parseArguments(raw: string): Record<string, unknown> | null {
+/** The model's raw tool arguments as an object, or null when they are not a JSON object. */
+export function parseArguments(raw: string): Record<string, unknown> | null {
   try {
     const v: unknown = JSON.parse(raw)
     return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null

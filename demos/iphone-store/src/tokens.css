@@ -1,0 +1,50 @@
+/* Hallmark · genre: atmospheric · macrostructure: Marquee Hero (home) + Split Studio (product) · theme: Midnight (Orchard drop)
+ * tone: luxury dark · anchor hue: champagne titanium (75°) · enrichment: Tier-A CSS art (PhoneArt) · nav: N5 · footer: Ft5
+ * pre-emit critique: P4 H5 E4 S4 R4 V4 */
+
+/* Orchard Store's own design tokens. The storefront is a fictional shop, not helpix, so it does not follow DESIGN.md;
+   the widget keeps helpix's tokens inside its shadow root. */
+@theme static {
+  --color-paper: oklch(14% 0.006 260);
+  --color-paper-2: oklch(18.5% 0.007 260);
+  --color-paper-3: oklch(23% 0.008 260);
+  --color-ink: oklch(96.5% 0.004 260);
+  --color-ink-2: oklch(74% 0.01 260);
+  --color-ink-3: oklch(58% 0.01 260);
+  --color-rule: oklch(28% 0.008 260);
+  --color-gold: oklch(82% 0.09 75);
+  --color-gold-ink: oklch(19% 0.02 75);
+  --color-bloom-warm: oklch(72% 0.1 70 / 0.11);
+  --color-bloom-cool: oklch(62% 0.06 255 / 0.1);
+  --color-shadow: oklch(0% 0 0 / 0.6);
+  --color-glass: oklch(12% 0.01 260);
+  --color-glass-hi: oklch(55% 0.04 250);
+  --color-alert: oklch(74% 0.14 28);
+
+  --font-display: "Geist", -apple-system, system-ui, sans-serif;
+  --font-body: "Geist", -apple-system, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  --text-display: clamp(3rem, 7.2vw + 0.5rem, 7.25rem);
+  --text-display-s: clamp(2.25rem, 4.5vw + 0.5rem, 4.5rem);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 160ms;
+  --dur-med: 320ms;
+
+  --rule-hair: 1px;
+  --radius-stage: 1.75rem;
+  --radius-pill: 999px;
+}

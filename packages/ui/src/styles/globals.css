@@ -8,7 +8,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+/* :host too: inside the widget's shadow root :root matches nothing. */
+:root, :host {
   --background: #F4F7F6;
   --foreground: #101A18;
   --card: #FFFFFF;
@@ -88,7 +89,7 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
-:root {
+:root, :host {
   color-scheme: light;
 }
 

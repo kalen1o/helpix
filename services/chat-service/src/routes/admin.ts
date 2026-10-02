@@ -54,11 +54,13 @@ export const adminRoutes: FastifyPluginAsync<ChatDeps> = async (app, deps) => {
   // customer id from a request body.
   app.post<{ Body: PlaygroundBody }>('/chat/playground', { schema: { body: playgroundBody } }, async (req, reply) => {
     const tenantId = tenantOf(req)
-    const { tenantName } = await deps.agentConfigs.getPublished(tenantId, req.id)
+    // The draft config comes from the body; whether the shop has an order API is the live setting.
+    const { tenantName, orderLookup } = await deps.agentConfigs.getPublished(tenantId, req.id)
+    const customerId = req.body.customerId?.trim() || null
     const conversation = await openPlaygroundConversation(deps.db, {
       tenantId,
       conversationId: req.body.conversationId ?? null,
-      customerId: req.body.customerId?.trim() || null,
+      customerId,
     })
     await runTurn(
       deps,
@@ -70,6 +72,8 @@ export const adminRoutes: FastifyPluginAsync<ChatDeps> = async (app, deps) => {
         shopName: tenantName,
         config: req.body.config,
         userMessage: req.body.message.trim(),
+        customerId,
+        orderLookup,
       },
       openEventStream(req, reply),
       req.log,

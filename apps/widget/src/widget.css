@@ -1,0 +1,8 @@
+@import "@helpix/ui/styles.css";
+@source "./";
+
+/* The shadow root still inherits font, colour and size from the shop's page; start from nothing. Custom properties
+   (the theme tokens on :host) are not affected by `all`. */
+:host {
+  all: initial;
+}

@@ -62,4 +62,42 @@ describe('ConversationDetailPage', () => {
     await flushPromises()
     expect(w.find('[role="alert"]').text()).toBe('This conversation does not exist.')
   })
+
+  it('shows order lookups: the order asked about, the status and the orders returned', async () => {
+    const order = {
+      orderId: '1047',
+      status: 'shipped' as const,
+      placedAt: '2026-09-28T10:00:00Z',
+      updatedAt: '2026-09-30T10:00:00Z',
+      items: [{ name: 'iPhone 15', quantity: 1, variant: 'Blue, 128 GB' }, { name: 'USB-C cable', quantity: 2 }],
+    }
+    vi.mocked(api.get).mockResolvedValue({
+      ...DETAIL,
+      messages: [
+        DETAIL.messages[0]!,
+        {
+          ...DETAIL.messages[1]!,
+          content: 'Order #1047 has shipped.',
+          tools: [
+            { name: 'lookup_order', arguments: { orderId: '1047' }, status: 'ok', results: [], error: null, orders: [order] },
+            { name: 'lookup_order', arguments: { orderId: '9999' }, status: 'empty', results: [], error: null },
+            { name: 'lookup_order', arguments: {}, status: 'error', results: [], error: 'unavailable' },
+          ],
+        },
+      ],
+    } satisfies ConversationDetail)
+    const w = mountPage()
+    await flushPromises()
+    const agent = w.find('[data-role="assistant"]')
+    expect(agent.text()).toContain('Order #1047 · shipped')
+    expect(agent.text()).toContain('Order not found')
+    expect(agent.text()).toContain("Couldn't check your order")
+    const details = agent.find('details').text()
+    expect(details).toContain('order #1047 · 1 order')
+    expect(details).toContain('#1047 · shipped · 1 × iPhone 15 (Blue, 128 GB), 2 × USB-C cable')
+    expect(details).toContain('order #9999 · not found')
+    expect(details).toContain('recent orders · unavailable')
+    // Order lookups are not knowledge-base searches.
+    expect(w.get('[aria-label="Conversation summary"]').text()).toContain('answered without searching')
+  })
 })

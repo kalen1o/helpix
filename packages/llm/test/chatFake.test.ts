@@ -43,6 +43,60 @@ describe('createFakeChat', () => {
     const noTools = await collect(createFakeChat('m').chat({ messages: [{ role: 'user', content: 'Hi' }] }))
     expect(textOf(noTools)).toBe("I don't know. Please contact the shop.")
   })
+
+  const ORDER_TOOL = { name: 'lookup_order', description: 'Look up', parameters: {} }
+  const prefetched = (user: string): ChatRequest['messages'] => [
+    { role: 'user', content: user },
+    { role: 'assistant', content: '', toolCalls: [{ id: 'p', name: 'search_kb', arguments: '{}' }] },
+    { role: 'tool', toolCallId: 'p', content: JSON.stringify({ results: [{ title: 'Shipping', text: 'Two days.' }] }) },
+  ]
+
+  it('calls lookup_order after the prefetched search when the customer asks about an order', async () => {
+    const events = await collect(createFakeChat().chat({ messages: prefetched('Where is order #1047?'), tools: [TOOL, ORDER_TOOL] }))
+    expect(events).toEqual([
+      { type: 'tool_call', call: { id: 'call_3', name: 'lookup_order', arguments: '{"orderId":"1047"}' } },
+      { type: 'done', finishReason: 'tool_calls' },
+    ])
+  })
+
+  it('lists orders when no order number is given, and only calls lookup_order once per turn', async () => {
+    const first = await collect(createFakeChat().chat({ messages: prefetched("Where's my ORDER?"), tools: [TOOL, ORDER_TOOL] }))
+    expect(first[0]).toEqual({ type: 'tool_call', call: { id: 'call_3', name: 'lookup_order', arguments: '{}' } })
+
+    const after: ChatRequest['messages'] = [
+      ...prefetched("Where's my order?"),
+      { role: 'assistant', content: '', toolCalls: [{ id: 'o', name: 'lookup_order', arguments: '{}' }] },
+      { role: 'tool', toolCallId: 'o', content: JSON.stringify({ orders: [{ orderId: '1008', status: 'processing' }, { orderId: '1001', status: 'delivered' }] }) },
+    ]
+    const answer = await collect(createFakeChat().chat({ messages: after, tools: [TOOL, ORDER_TOOL] }))
+    expect(textOf(answer)).toBe('Order 1008 is processing. Order 1001 is delivered.')
+  })
+
+  it('answers a single order, an empty history and a failed lookup', async () => {
+    const reply = async (content: string) =>
+      textOf(
+        await collect(
+          createFakeChat().chat({
+            messages: [
+              { role: 'user', content: 'order 1047?' },
+              { role: 'assistant', content: '', toolCalls: [{ id: 'o', name: 'lookup_order', arguments: '{}' }] },
+              { role: 'tool', toolCallId: 'o', content },
+            ],
+            tools: [TOOL, ORDER_TOOL],
+          }),
+        ),
+      )
+    expect(await reply(JSON.stringify({ order: { orderId: '1047', status: 'shipped' } }))).toBe('Order 1047 is shipped.')
+    expect(await reply(JSON.stringify({ orders: [], note: 'none' }))).toBe('You have no orders yet.')
+    expect(await reply("No order with that number on this customer's account.")).toBe("I couldn't check that order right now.")
+  })
+
+  it('does not call lookup_order when it is not offered or the message is not about orders', async () => {
+    const notOffered = await collect(createFakeChat().chat({ messages: prefetched('Where is order 1047?'), tools: [TOOL] }))
+    expect(textOf(notOffered)).toBe('From "Shipping": Two days.')
+    const notAboutOrders = await collect(createFakeChat().chat({ messages: prefetched('Shipping time?'), tools: [TOOL, ORDER_TOOL] }))
+    expect(textOf(notAboutOrders)).toBe('From "Shipping": Two days.')
+  })
 })
 
 describe('createScriptedChat', () => {

@@ -8,6 +8,7 @@
     "./api-types": "./src/api-types.ts",
     "./agent-config": "./src/agent-config.ts",
     "./chat": "./src/chat.ts",
+    "./orders": "./src/orders.ts",
     "./sse": "./src/sse.ts",
     "./testing": "./src/testing.ts"
   },

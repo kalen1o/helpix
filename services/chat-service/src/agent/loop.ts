@@ -11,6 +11,11 @@ export interface AgentRunInput {
   tools: AgentTool[]
   /** Rounds that may call tools; one more round without tools follows if the model is still calling them. */
   maxToolRounds: number
+  /**
+   * A tool call made on the model's behalf before the first round, as if the model had made it. Ignored when the tool
+   * is not offered. Not counted against `maxToolRounds`.
+   */
+  prefetch?: ToolCall
   signal: AbortSignal
   onText(text: string): void
   onTool(activity: ToolActivity): void
@@ -46,6 +51,20 @@ export async function runAgent(input: AgentRunInput): Promise<{ text: string; to
     input.onText(out)
   }
 
+  const runCalls = async (calls: ToolCall[]) => {
+    for (const call of calls) {
+      const outcome = await (tools.get(call.name)?.run(call.arguments) ?? Promise.resolve(unknownTool(call)))
+      messages.push({ role: 'tool', toolCallId: call.id, content: outcome.content })
+      activities.push(outcome.activity)
+      input.onTool(outcome.activity)
+    }
+  }
+
+  if (input.prefetch && tools.has(input.prefetch.name)) {
+    messages.push({ role: 'assistant', content: '', toolCalls: [input.prefetch] })
+    await runCalls([input.prefetch])
+  }
+
   for (let round = 0; round <= input.maxToolRounds; round++) {
     const offerTools = round < input.maxToolRounds && input.tools.length > 0
     let roundText = ''
@@ -66,12 +85,7 @@ export async function runAgent(input: AgentRunInput): Promise<{ text: string; to
     if (calls.length === 0) break
 
     messages.push({ role: 'assistant', content: roundText, toolCalls: calls })
-    for (const call of calls) {
-      const outcome = await (tools.get(call.name)?.run(call.arguments) ?? Promise.resolve(unknownTool(call)))
-      messages.push({ role: 'tool', toolCallId: call.id, content: outcome.content })
-      activities.push(outcome.activity)
-      input.onTool(outcome.activity)
-    }
+    await runCalls(calls)
     if (text) pendingBreak = true
   }
 

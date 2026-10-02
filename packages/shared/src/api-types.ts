@@ -1,4 +1,6 @@
 // Pure types shared by services and the dashboard. No runtime imports allowed here.
+import type { Order, OrderLookupStatus, OrderStatus } from './orders'
+
 export type Role = 'super_admin' | 'tenant_admin'
 export type TenantStatus = 'active' | 'suspended'
 
@@ -39,6 +41,17 @@ export interface ResolvedAdmin {
 
 export interface ResolvedWidget {
   tenantId: string
+  /** The shop's customer ID; present only when a customer token was sent and verified. */
+  customerId?: string
+}
+
+/** tenant-auth → widget (`GET /widget/config`): what the widget needs before the first message. */
+export interface WidgetConfig {
+  shopName: string
+  greeting: string
+  accentColor: string
+  /** True when the tenant has an order API configured, so signed-in shoppers can ask about their orders. */
+  orderLookup: boolean
 }
 
 export type DocumentStatus = 'processing' | 'ready' | 'failed'
@@ -111,6 +124,8 @@ export interface AgentConfigState {
 export interface PublishedAgentConfig {
   tenantName: string
   config: AgentConfig
+  /** True when the tenant has an order API configured (base URL and key). */
+  orderLookup: boolean
 }
 
 export interface ChatModelsResponse {
@@ -130,6 +145,8 @@ export interface ToolActivity {
   /** search_kb hits, including the text the model saw. */
   results: KbSearchResult[]
   error: string | null
+  /** lookup_order: the order(s) the shop returned (status 'ok' only). The only place Helpix stores order data. */
+  orders?: Order[]
 }
 
 export interface ChatSource {
@@ -142,6 +159,8 @@ export interface ChatToolEvent {
   name: string
   status: ToolStatus
   sources: ChatSource[]
+  /** lookup_order: enough to draw order chips. */
+  orders?: { orderId: string; status: OrderStatus }[]
 }
 
 /** Events on a chat SSE stream, in order: meta, then any of delta/tool, then done or error. */
@@ -185,4 +204,17 @@ export interface ConversationListResponse {
 export interface ConversationDetail {
   conversation: ConversationSummary
   messages: ChatMessageView[]
+}
+
+/** `GET /integrations` (tenant admin). The order API key is never returned, only whether one is stored. */
+export interface IntegrationsView {
+  orderApi: { baseUrl: string; hasApiKey: boolean; updatedAt: string } | null
+  shopKey: { fingerprint: string; updatedAt: string } | null
+}
+
+/** `POST /integrations/order-api/test`: the outcome in plain words. */
+export interface OrderApiTestResult {
+  ok: boolean
+  status: OrderLookupStatus
+  message: string
 }

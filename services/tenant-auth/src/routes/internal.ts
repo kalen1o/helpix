@@ -3,8 +3,10 @@ import { AppError, HEADERS, INTERNAL_CALLER_RESOLVER } from '@helpix/shared'
 import type { ResolvedAdmin, ResolvedWidget } from '@helpix/shared/api-types'
 import { assertAdminActive } from '../auth/service'
 import type { RouteDeps } from '../deps'
+import { CUSTOMER_TOKEN_MAX, invalidCustomerToken, verifyCustomerToken } from '../lib/customerToken'
 import { tryNormalizeOrigin } from '../lib/origins'
 import { findAdminById } from '../repos/admins'
+import { getIntegrations } from '../repos/integrations'
 import { findTenantByWidgetKey } from '../repos/tenants'
 
 const resolveAdminBody = {
@@ -19,6 +21,7 @@ const resolveWidgetBody = {
   properties: {
     widgetKey: { type: 'string', minLength: 1, maxLength: 200 },
     origin: { type: ['string', 'null'], maxLength: 300 },
+    customerToken: { type: 'string', minLength: 1, maxLength: CUSTOMER_TOKEN_MAX },
   },
 } as const
 
@@ -44,7 +47,7 @@ export const internalRoutes: FastifyPluginAsync<RouteDeps> = async (app, { db, t
     },
   )
 
-  app.post<{ Body: { widgetKey: string; origin: string | null } }>(
+  app.post<{ Body: { widgetKey: string; origin: string | null; customerToken?: string } }>(
     '/internal/resolve-widget',
     { schema: { body: resolveWidgetBody } },
     async (req): Promise<ResolvedWidget> => {
@@ -55,7 +58,15 @@ export const internalRoutes: FastifyPluginAsync<RouteDeps> = async (app, { db, t
       if (!origin || !tenant.allowedOrigins.includes(origin)) {
         throw new AppError(403, 'origin_not_allowed', 'This site is not allowed to use this widget key')
       }
-      return { tenantId: tenant.id }
+      if (req.body.customerToken === undefined) return { tenantId: tenant.id }
+      // The shopper's identity: verified against this tenant's own shop key, with aud = this tenant's widget key.
+      const integrations = await getIntegrations(db, tenant.id)
+      if (!integrations?.shop_key_pem) throw invalidCustomerToken()
+      const { customerId } = await verifyCustomerToken(req.body.customerToken, {
+        pem: integrations.shop_key_pem,
+        audience: tenant.widgetKey,
+      })
+      return { tenantId: tenant.id, customerId }
     },
   )
 }

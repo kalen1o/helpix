@@ -6,22 +6,34 @@ import { Badge, Card, CardContent, CardHeader, CardTitle, PageHeader, StatPanel,
 import { ApiError } from '@/api/client'
 import { api } from '@/auth/session'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
-import { customerLabel, toChatToolEvent } from '@/lib/chat'
+import { customerLabel, orderSummary, toChatToolEvent } from '@/lib/chat'
 import { formatDateTime } from '@/lib/format'
 
 const route = useRoute()
 const detail = ref<ConversationDetail | null>(null)
 const error = ref<string | null>(null)
 
-const queryOf = (t: ToolActivity): string | null => (typeof t.arguments?.query === 'string' ? t.arguments.query : null)
-const outcome = (t: ToolActivity): string =>
-  t.status === 'ok'
+/** What a tool call asked for, shown after its name. The model never chooses the customer, so only the order is shown. */
+function asked(t: ToolActivity): string | null {
+  if (t.name === 'lookup_order') return typeof t.arguments?.orderId === 'string' ? `order #${t.arguments.orderId}` : 'recent orders'
+  return typeof t.arguments?.query === 'string' ? `“${t.arguments.query}”` : null
+}
+
+function outcome(t: ToolActivity): string {
+  if (t.name === 'lookup_order') {
+    const n = t.orders?.length ?? 0
+    if (t.status === 'ok') return `${n} order${n === 1 ? '' : 's'}`
+    return t.status === 'empty' ? 'not found' : (t.error ?? "couldn't reach the shop")
+  }
+  return t.status === 'ok'
     ? `${t.results.length} result${t.results.length === 1 ? '' : 's'}`
     : t.status === 'empty'
       ? 'nothing relevant'
       : (t.error ?? 'failed')
+}
 
-const lookups = computed(() => detail.value?.messages.flatMap((m) => m.tools) ?? [])
+/** Knowledge-base searches only; order lookups are listed with their message. */
+const lookups = computed(() => detail.value?.messages.flatMap((m) => m.tools).filter((t) => t.name === 'search_kb') ?? [])
 /** Every document the agent's searches returned, once, in first-seen order. */
 const sources = computed(() => {
   const seen = new Map<string, string>()
@@ -92,13 +104,14 @@ onMounted(async () => {
                     <li v-for="(t, i) in m.tools" :key="i" class="grid gap-1.5 rounded-lg border bg-muted/50 p-3">
                       <span>
                         <span class="font-mono uppercase tracking-[0.08em] text-[11px]">{{ t.name }}</span>
-                        <template v-if="queryOf(t)"> “{{ queryOf(t) }}”</template>
+                        <template v-if="asked(t)"> {{ asked(t) }}</template>
                         · {{ outcome(t) }}
                       </span>
                       <span v-for="r in t.results" :key="`${r.documentId}:${r.position}`" class="text-foreground/80">
                         <span class="font-medium">{{ r.title }}</span> <span class="font-mono tabular-nums">({{ r.score.toFixed(2) }})</span>:
                         {{ excerpt(r.text) }}
                       </span>
+                      <span v-for="o in t.orders ?? []" :key="o.orderId" class="text-foreground/80">{{ orderSummary(o) }}</span>
                     </li>
                   </ul>
                 </details>

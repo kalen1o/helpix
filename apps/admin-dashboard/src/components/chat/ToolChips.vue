@@ -6,7 +6,7 @@ import { chipsFor } from '@/lib/chat'
 
 const props = defineProps<{ tools: ChatToolEvent[] }>()
 const chips = computed(() => chipsFor(props.tools))
-const VARIANT = { source: 'positive', empty: 'outline', error: 'negative' } as const
+const VARIANT = { source: 'positive', empty: 'outline', error: 'negative', order: 'secondary' } as const
 </script>
 
 <template>

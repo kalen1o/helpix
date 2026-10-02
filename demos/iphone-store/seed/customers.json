@@ -1,0 +1,5 @@
+[
+  { "id": "cust_maya", "name": "Maya Chen", "email": "maya@orchard.demo", "password": "orchard-demo" },
+  { "id": "cust_leo", "name": "Leo Martins", "email": "leo@orchard.demo", "password": "orchard-demo" },
+  { "id": "cust_ana", "name": "Ana Okafor", "email": "ana@orchard.demo", "password": "orchard-demo" }
+]

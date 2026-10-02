@@ -49,7 +49,7 @@ describe('createKbClient', () => {
 })
 
 describe('createAgentConfigClient', () => {
-  const published = { tenantName: 'Shop', config: DEFAULT_AGENT_CONFIG }
+  const published = { tenantName: 'Shop', config: DEFAULT_AGENT_CONFIG, orderLookup: true }
 
   it('fetches as the chat caller and caches per tenant', async () => {
     const { fetch, calls } = fakeFetch(() => json(200, published))
@@ -61,6 +61,12 @@ describe('createAgentConfigClient', () => {
     const headers = new Headers(calls[0]!.init.headers)
     expect(headers.get('x-internal-caller')).toBe('chat')
     expect(headers.get('x-internal-token')).toBe('tok')
+  })
+
+  it('reads a missing orderLookup as false', async () => {
+    const { fetch } = fakeFetch(() => json(200, { tenantName: 'Shop', config: DEFAULT_AGENT_CONFIG }))
+    const client = createAgentConfigClient({ baseUrl: 'http://ta.test', internalToken: 'tok', cacheTtlMs: 60_000, fetch })
+    expect((await client.getPublished('t1', 'r')).orderLookup).toBe(false)
   })
 
   it('reports a suspended or unknown shop, and does not cache failures', async () => {

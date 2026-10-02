@@ -32,4 +32,10 @@ describe('loadConfig', () => {
     }
     expect(loadConfig({ ...ENV, [key]: '2048' })).toBeDefined()
   })
+
+  it('defaults the widget bundle path to apps/widget/dist and honours WIDGET_BUNDLE_PATH', () => {
+    const base = { INTERNAL_TOKEN: 'x'.repeat(32), TENANT_AUTH_URL: 'http://a', KB_SERVICE_URL: 'http://b', CHAT_SERVICE_URL: 'http://c' }
+    expect(loadConfig(base).widgetBundlePath).toMatch(/apps[\\/]widget[\\/]dist[\\/]helpix-widget\.js$/)
+    expect(loadConfig({ ...base, WIDGET_BUNDLE_PATH: '/tmp/w.js' }).widgetBundlePath).toBe('/tmp/w.js')
+  })
 })

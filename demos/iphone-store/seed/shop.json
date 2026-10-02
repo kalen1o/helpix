@@ -1,0 +1,7 @@
+{
+  "name": "Orchard Store",
+  "slug": "orchard-store",
+  "origin": "http://localhost:5174",
+  "adminEmail": "admin@orchard.demo",
+  "adminPassword": "orchard-demo-password"
+}

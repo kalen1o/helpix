@@ -46,17 +46,23 @@ export async function publishDraft(db: Db, tenantId: string): Promise<AgentConfi
   return toState(rows[0])
 }
 
-/** What the live agent runs on: the published config (defaults before the first publish) and the shop's name. */
+/**
+ * What the live agent runs on: the published config (defaults before the first publish), the shop's name, and
+ * whether order lookup is available (an order API URL and key are stored).
+ */
 export async function getPublishedConfig(
   db: Db,
   tenantId: string,
-): Promise<{ tenantName: string; status: TenantStatus; config: AgentConfig } | null> {
-  const { rows } = await db.query<{ name: string; status: TenantStatus; published: Partial<AgentConfig> | null }>(
-    `SELECT t.name, t.status, c.published
-       FROM tenant_auth.tenants t LEFT JOIN tenant_auth.agent_configs c ON c.tenant_id = t.id
+): Promise<{ tenantName: string; status: TenantStatus; config: AgentConfig; orderLookup: boolean } | null> {
+  const { rows } = await db.query<{ name: string; status: TenantStatus; published: Partial<AgentConfig> | null; order_lookup: boolean }>(
+    `SELECT t.name, t.status, c.published,
+            (i.order_api_base_url IS NOT NULL AND i.order_api_key_enc IS NOT NULL) AS order_lookup
+       FROM tenant_auth.tenants t
+       LEFT JOIN tenant_auth.agent_configs c ON c.tenant_id = t.id
+       LEFT JOIN tenant_auth.integrations i ON i.tenant_id = t.id
       WHERE t.id = $1`,
     [tenantId],
   )
   const r = rows[0]
-  return r ? { tenantName: r.name, status: r.status, config: withAgentDefaults(r.published) } : null
+  return r ? { tenantName: r.name, status: r.status, config: withAgentDefaults(r.published), orderLookup: r.order_lookup === true } : null
 }

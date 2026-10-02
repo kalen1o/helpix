@@ -1,6 +1,16 @@
 [
   {
     "date": "2026-10-01",
+    "scope": "app",
+    "macrostructure": "Marquee Hero (home) + Split Studio (product, lineup)",
+    "theme": "Midnight (Orchard drop: champagne-titanium accent, Geist)",
+    "enrichment": "Unsplash stock photos (public/products, CREDITS.md); PhoneArt CSS art as fallback",
+    "nav": "N5 Floating pill",
+    "footer": "Ft5 Statement",
+    "brief": "Orchard Store demo shop redesign: luxury dark"
+  },
+  {
+    "date": "2026-10-01",
     "macrostructure": "n/a (app dashboard: DESIGN.md modular panels)",
     "theme": "helpix-v1 (DESIGN.md)",
     "enrichment": "none",

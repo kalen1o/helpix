@@ -3,6 +3,7 @@ import { ChatError, createScriptedChat, type ChatEvent, type ChatProvider } from
 import { AppError, type Db } from '@helpix/shared'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { ORDER_NOT_FOUND, ORDERS_UNAVAILABLE } from '../src/agent/lookupOrder'
 import { listMessages } from '../src/repos/messages'
 import {
   adminHeaders,
@@ -10,9 +11,11 @@ import {
   customerHeaders,
   fakeConfigs,
   fakeKb,
+  fakeOrders,
   HIT,
   internalHeaders,
   makeDeps,
+  ORDER,
   parseEvents,
   replyText,
   resetDb,
@@ -28,6 +31,10 @@ beforeEach(async () => { await resetDb(db) })
 const send = (app: FastifyInstance, headers: Record<string, string>, payload: object) =>
   app.inject({ method: 'POST', url: '/chat/messages', headers, payload })
 const answer = (t: string): ChatEvent[] => [{ type: 'text', text: t }, { type: 'done', finishReason: 'stop' }]
+const callLookup = (args: object): ChatEvent[] => [
+  { type: 'tool_call', call: { id: 'c1', name: 'lookup_order', arguments: JSON.stringify(args) } },
+  { type: 'done', finishReason: 'tool_calls' },
+]
 const messageCount = async () => (await db.query<{ n: number }>('SELECT count(*)::int AS n FROM chat.messages')).rows[0]!.n
 
 describe('POST /chat/messages', () => {
@@ -60,6 +67,22 @@ describe('POST /chat/messages', () => {
     await app.close()
   })
 
+  it('searches the knowledge base with the message even when the model would answer without calling a tool', async () => {
+    const kb = fakeKb({ [TENANT_A]: [HIT] })
+    const chat = createScriptedChat(() => answer('Refunds within 30 days.'))
+    const app = await buildTestApp(makeDeps(db, { kb, chat }))
+    const events = await parseEvents((await send(app, customerHeaders(TENANT_A), { message: 'Refund policy?' })).payload)
+    expect(kb.calls).toEqual([{ tenantId: TENANT_A, query: 'Refund policy?' }])
+    expect(events.find((e) => e.event === 'tool')!.data).toMatchObject({ name: 'search_kb', status: 'ok' })
+    expect(chat.requests[0]!.messages.slice(-2)).toEqual([
+      { role: 'assistant', content: '', toolCalls: [{ id: expect.any(String), name: 'search_kb', arguments: '{"query":"Refund policy?"}' }] },
+      { role: 'tool', toolCallId: expect.any(String), content: expect.stringContaining('Refunds within 30 days.') },
+    ])
+    const stored = await listMessages(db, TENANT_A, events[0]!.data.conversationId)
+    expect(stored[1]!.tools).toEqual([{ name: 'search_kb', arguments: { query: 'Refund policy?' }, status: 'ok', results: [HIT], error: null }])
+    await app.close()
+  })
+
   it('continues the conversation with its session token and sends the history to the model', async () => {
     const chat = createScriptedChat((_req, call) => answer(`Answer ${call}`))
     const app = await buildTestApp(makeDeps(db, { chat }))
@@ -68,11 +91,13 @@ describe('POST /chat/messages', () => {
     const second = await parseEvents((await send(app, customerHeaders(TENANT_A), { message: 'Second?', conversationId, sessionToken })).payload)
     expect(second[0]).toEqual({ event: 'meta', data: { conversationId } })
     expect(replyText(second)).toBe('Answer 1')
-    expect(chat.requests[1]!.messages.slice(1)).toEqual([
+    // History, then the new message; the prefetched search pair follows it.
+    expect(chat.requests[1]!.messages.slice(1, 4)).toEqual([
       { role: 'user', content: 'First?' },
       { role: 'assistant', content: 'Answer 0' },
       { role: 'user', content: 'Second?' },
     ])
+    expect(chat.requests[1]!.messages.slice(4).map((m) => m.role)).toEqual(['assistant', 'tool'])
     await app.close()
   })
 
@@ -93,8 +118,8 @@ describe('POST /chat/messages', () => {
     const chat = createScriptedChat([[{ type: 'text', text: 'Partial' }, new ChatError('The chat model returned HTTP 503', true)]])
     const app = await buildTestApp(makeDeps(db, { chat }))
     const events = await parseEvents((await send(app, customerHeaders(TENANT_A), { message: 'Hello' })).payload)
-    expect(events.map((e) => e.event)).toEqual(['meta', 'delta', 'error'])
-    expect(events[2]!.data).toEqual({ code: 'llm_unavailable', message: 'The assistant is unavailable right now. Please try again.' })
+    expect(events.map((e) => e.event)).toEqual(['meta', 'tool', 'delta', 'error'])
+    expect(events[3]!.data).toEqual({ code: 'llm_unavailable', message: 'The assistant is unavailable right now. Please try again.' })
     expect(JSON.stringify(events)).not.toContain('503')
     expect(await messageCount()).toBe(0)
     await app.close()
@@ -196,6 +221,9 @@ describe('POST /chat/messages', () => {
       await new Promise((r) => setTimeout(r, 50))
       expect(await messageCount()).toBe(0)
     } finally {
+      // Node 22's fetch opens a spare keep-alive connection after the abort that never sends a request, and
+      // server.close() waits for it; drop it like the gateway tests do.
+      app.server.closeAllConnections()
       await app.close()
     }
   })
@@ -237,7 +265,88 @@ describe('POST /chat/messages', () => {
       expect(await messageCount()).toBe(0)
     } finally {
       release()
+      // See the test above: Node 22's fetch leaves a spare connection open after the abort.
+      app.server.closeAllConnections()
       await app.close()
     }
+  })
+
+  it('offers lookup_order only to a verified customer on a shop with order lookup', async () => {
+    const cases: [Record<string, string>, object, boolean, string[]][] = [
+      [customerHeaders(TENANT_A, 'cust_maya'), { message: 'Where is my order?' }, true, ['search_kb', 'lookup_order']],
+      [customerHeaders(TENANT_A), { message: 'Where is my order?' }, true, ['search_kb']],
+      [customerHeaders(TENANT_A), { message: 'Where is my order?', customerId: 'cust_maya' }, true, ['search_kb']],
+      [customerHeaders(TENANT_A, 'cust_maya'), { message: 'Where is my order?' }, false, ['search_kb']],
+    ]
+    for (const [headers, payload, orderLookup, expected] of cases) {
+      const chat = createScriptedChat(() => answer('ok'))
+      const app = await buildTestApp(makeDeps(db, { chat, agentConfigs: fakeConfigs({}, 'Test Shop', orderLookup) }))
+      await send(app, headers, payload)
+      expect(chat.requests[0]!.tools!.map((t) => t.name)).toEqual(expected)
+      await app.close()
+    }
+  })
+
+  it('tells the model whether the shopper is signed in, without the customer id', async () => {
+    const cases: [Record<string, string>, boolean, string, string[]][] = [
+      [customerHeaders(TENANT_A, 'cust_maya'), true, 'The customer is signed in on Test Shop and verified.', ['is not signed in', 'has not connected']],
+      [customerHeaders(TENANT_A), true, 'The customer is not signed in, so you cannot see any orders.', ['is signed in on', 'has not connected']],
+      [customerHeaders(TENANT_A, 'cust_maya'), false, 'Test Shop has not connected its order system', ['is signed in on', 'is not signed in']],
+    ]
+    for (const [headers, orderLookup, expected, absent] of cases) {
+      const chat = createScriptedChat(() => answer('ok'))
+      const app = await buildTestApp(makeDeps(db, { chat, agentConfigs: fakeConfigs({}, 'Test Shop', orderLookup) }))
+      await send(app, headers, { message: 'Where is my order?' })
+      const system = chat.requests[0]!.messages[0]!.content
+      expect(system).toContain(expected)
+      for (const text of absent) expect(system).not.toContain(text)
+      expect(system).not.toContain('cust_maya')
+      await app.close()
+    }
+  })
+
+  it("looks up the gateway's customer whatever the model passes, streams the order and stores it", async () => {
+    const orders = fakeOrders({ status: 'ok', order: ORDER })
+    const chat = createScriptedChat((_req, call) =>
+      call === 0 ? callLookup({ orderId: '1001', customerId: 'cust_leo' }) : answer('Order 1001 has shipped.'),
+    )
+    const app = await buildTestApp(makeDeps(db, { chat, orders, agentConfigs: fakeConfigs({}, 'Test Shop', true) }))
+    const events = await parseEvents((await send(app, customerHeaders(TENANT_A, 'cust_maya'), { message: 'Where is order 1001?' })).payload)
+    expect(orders.calls).toEqual([{ kind: 'get', tenantId: TENANT_A, customerId: 'cust_maya', orderId: '1001' }])
+    expect(events.find((e) => e.event === 'tool' && e.data.name === 'lookup_order')!.data).toEqual({
+      name: 'lookup_order',
+      status: 'ok',
+      sources: [],
+      orders: [{ orderId: '1001', status: 'shipped' }],
+    })
+    expect(chat.requests[1]!.messages.at(-1)).toEqual({ role: 'tool', toolCallId: 'c1', content: JSON.stringify({ order: ORDER }) })
+    expect(events.at(-1)!.event).toBe('done')
+    const stored = await listMessages(db, TENANT_A, events[0]!.data.conversationId)
+    expect(stored[1]!.tools[1]).toEqual({
+      name: 'lookup_order',
+      arguments: { orderId: '1001', customerId: 'cust_leo' },
+      status: 'ok',
+      results: [],
+      error: null,
+      orders: [ORDER],
+    })
+    await app.close()
+  })
+
+  it.each([
+    ['not_found', ORDER_NOT_FOUND, 'empty', null],
+    ['unavailable', ORDERS_UNAVAILABLE, 'error', 'unavailable'],
+    ['misconfigured', ORDERS_UNAVAILABLE, 'error', 'misconfigured'],
+    ['not_configured', ORDERS_UNAVAILABLE, 'error', 'not_configured'],
+  ] as const)('on %s tells the model so, stores the status and still finishes the turn', async (status, content, toolStatus, error) => {
+    const chat = createScriptedChat((_req, call) => (call === 0 ? callLookup({ orderId: '1001' }) : answer("I can't check that right now.")))
+    const app = await buildTestApp(makeDeps(db, { chat, orders: fakeOrders({ status }), agentConfigs: fakeConfigs({}, 'Test Shop', true) }))
+    const events = await parseEvents((await send(app, customerHeaders(TENANT_A, 'cust_maya'), { message: 'Order 1001?' })).payload)
+    expect(chat.requests[1]!.messages.at(-1)).toEqual({ role: 'tool', toolCallId: 'c1', content })
+    expect(events.find((e) => e.event === 'tool' && e.data.name === 'lookup_order')!.data).toMatchObject({ name: 'lookup_order', status: toolStatus })
+    expect(events.at(-1)!.event).toBe('done')
+    const stored = await listMessages(db, TENANT_A, events[0]!.data.conversationId)
+    expect(stored[1]!.tools[1]).toEqual({ name: 'lookup_order', arguments: { orderId: '1001' }, status: toolStatus, results: [], error })
+    await app.close()
   })
 })

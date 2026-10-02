@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 export interface GatewayConfig {
   port: number
   internalToken: string
@@ -9,6 +11,8 @@ export interface GatewayConfig {
   /** Body limit for KB uploads (files and pasted text); everything else uses bodyLimitBytes. */
   kbUploadLimitBytes: number
   resolveCacheTtlMs: number
+  /** The built widget bundle served at GET /widget/helpix-widget.js. */
+  widgetBundlePath: string
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig {
@@ -36,5 +40,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
     bodyLimitBytes: positiveInt('BODY_LIMIT_BYTES', 1_048_576),
     kbUploadLimitBytes: positiveInt('KB_UPLOAD_LIMIT_BYTES', 11 * 1024 * 1024),
     resolveCacheTtlMs: positiveInt('RESOLVE_CACHE_TTL_MS', 30_000),
+    widgetBundlePath: env.WIDGET_BUNDLE_PATH || fileURLToPath(new URL('../../../apps/widget/dist/helpix-widget.js', import.meta.url)),
   }
 }

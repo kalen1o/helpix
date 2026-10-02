@@ -1,6 +1,7 @@
 import net, { type AddressInfo } from 'node:net'
 import type { FastifyInstance } from 'fastify'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AppError } from '@helpix/shared'
 import type { ResolvedAdmin } from '@helpix/shared/api-types'
 import { buildGateway } from '../src/app'
 import { rawRequest, startEcho, TEST_INTERNAL_TOKEN, testConfig } from './helpers'
@@ -110,7 +111,7 @@ describe('gateway path canonicalization (raw request line)', () => {
 
   beforeEach(async () => {
     resolveAdmin.mockClear()
-    g = await buildGateway({ config: testConfig(echo.url), tenantAuth: { resolveAdmin } })
+    g = await buildGateway({ config: testConfig(echo.url), tenantAuth: { resolveAdmin, resolveWidget: vi.fn(async () => { throw new AppError(401, 'invalid_widget_key', 'Unknown widget key') }) } })
     await g.listen({ port: 0, host: '127.0.0.1' })
     port = (g.server.address() as AddressInfo).port
   })

@@ -67,5 +67,6 @@ export function testConfig(tenantAuthUrl: string, kbServiceUrl: string = tenantA
     bodyLimitBytes: 1024,
     kbUploadLimitBytes: 4096,
     resolveCacheTtlMs: 30_000,
+    widgetBundlePath: '/nonexistent/helpix-widget.js',
   }
 }
