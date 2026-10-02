@@ -28,3 +28,39 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: helpix
+          POSTGRES_PASSWORD: helpix
+          POSTGRES_DB: helpix_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U helpix -d helpix_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgres://helpix:helpix@localhost:5433/helpix_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Service containers can't mount docker/postgres/init.sql, so enable pgvector here.
+      - name: Enable pgvector
+        run: psql "$TEST_DATABASE_URL" -c 'CREATE EXTENSION IF NOT EXISTS vector;'
+
+      - name: Test
+        run: npm test

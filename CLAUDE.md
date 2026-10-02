@@ -33,7 +33,7 @@ npm run dev -w services/gateway                          # one service with hot 
 
 DB-backed tests use the `helpix_test` database on `localhost:5433` (override with `TEST_DATABASE_URL`). Postgres must be running (`make db`). The init script `docker/postgres/init.sql` creates `helpix_test` and the `vector` extension, so it only runs on a fresh volume. Service vitest configs set `fileParallelism: false` because the test files share one database.
 
-CI (`.github/workflows/ci.yml`) runs only `npm run typecheck` and `npm run build`. It runs no tests.
+CI (`.github/workflows/ci.yml`) runs `npm run typecheck` and `npm run build` in one job, and `npm test` in another against a pgvector service container (`helpix_test` on port 5433).
 
 TypeScript is pinned to ~5.9 at the root because vue-tsc does not support TS 7.
 
