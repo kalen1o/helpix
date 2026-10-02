@@ -221,6 +221,9 @@ describe('POST /chat/messages', () => {
       await new Promise((r) => setTimeout(r, 50))
       expect(await messageCount()).toBe(0)
     } finally {
+      // Node 22's fetch opens a spare keep-alive connection after the abort that never sends a request, and
+      // server.close() waits for it; drop it like the gateway tests do.
+      app.server.closeAllConnections()
       await app.close()
     }
   })
@@ -262,6 +265,8 @@ describe('POST /chat/messages', () => {
       expect(await messageCount()).toBe(0)
     } finally {
       release()
+      // See the test above: Node 22's fetch leaves a spare connection open after the abort.
+      app.server.closeAllConnections()
       await app.close()
     }
   })
